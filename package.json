@@ -1,0 +1,62 @@
+{
+  "name": "@your-scope/fast-openclaw",
+  "version": "0.1.0",
+  "description": "One-click OpenClaw setup CLI for macOS",
+  "type": "module",
+  "bin": {
+    "fast-openclaw": "dist/index.js",
+    "fast-openclaw-server": "dist/server/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "public",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "dev:server": "tsx src/server/index.ts",
+    "start:server": "node dist/server/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run test && npm run typecheck && npm run build"
+  },
+  "keywords": [
+    "openclaw",
+    "cli",
+    "macos",
+    "installer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xjy264/fast-openclaw.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xjy264/fast-openclaw/issues"
+  },
+  "homepage": "https://github.com/xjy264/fast-openclaw#readme",
+  "dependencies": {
+    "@inquirer/prompts": "^8.3.0",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

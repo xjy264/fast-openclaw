@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fast-openclaw Admin</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --line: #e6e8ef;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --ok: #0f766e;
+      --warn: #b45309;
+      --bad: #b91c1c;
+      --new: #0369a1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #eef2ff 0%, var(--bg) 30%, var(--bg) 100%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1120px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    }
+    h1, h2 { margin: 0 0 12px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 16px; color: #111827; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+    .field { grid-column: span 12; }
+    .field.w4 { grid-column: span 4; }
+    .field.w3 { grid-column: span 3; }
+    .field.w2 { grid-column: span 2; }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      background: #fff;
+    }
+    button {
+      cursor: pointer;
+      background: #111827;
+      color: #fff;
+      border: 0;
+    }
+    button.secondary {
+      background: #fff;
+      color: #111827;
+      border: 1px solid var(--line);
+    }
+    .muted { color: var(--muted); font-size: 12px; }
+    .status {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .s-NEW { color: #fff; background: var(--new); }
+    .s-IN_USE { color: #fff; background: var(--warn); }
+    .s-USED { color: #fff; background: var(--ok); }
+    .s-DISABLED { color: #fff; background: var(--bad); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      padding: 10px 8px;
+      vertical-align: top;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      min-width: 150px;
+    }
+    .actions button {
+      font-size: 12px;
+      padding: 7px 10px;
+    }
+    .log {
+      white-space: pre-wrap;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 72px;
+      font-size: 12px;
+    }
+    @media (max-width: 900px) {
+      .field.w4, .field.w3, .field.w2 { grid-column: span 12; }
+      table, thead, tbody, tr, th, td { display: block; }
+      th { display: none; }
+      td { border: 0; border-bottom: 1px solid var(--line); }
+      td::before {
+        content: attr(data-label) ": ";
+        font-weight: 600;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>fast-openclaw 管理后台</h1>
+      <div class="grid">
+        <div class="field w4">
+          <label>Admin Token</label>
+          <input id="token" type="password" placeholder="FAST_OPENCLAW_ADMIN_TOKEN" />
+        </div>
+        <div class="field w3">
+          <button id="saveToken">保存 Token</button>
+        </div>
+        <div class="field w3">
+          <button id="refresh" class="secondary">刷新列表</button>
+        </div>
+      </div>
+      <p class="muted">Token 仅保存在浏览器 localStorage。API 需要 Authorization: Bearer &lt;token&gt;。</p>
+    </div>
+
+    <div class="card">
+      <h2>创建密钥</h2>
+      <div class="grid">
+        <div class="field w4">
+          <label>标签（客户名）</label>
+          <input id="label" type="text" placeholder="例如：客户A-2026Q1" />
+        </div>
+        <div class="field w2">
+          <label>数量</label>
+          <input id="count" type="number" min="1" max="200" value="1" />
+        </div>
+        <div class="field w3">
+          <button id="create">创建密钥</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>密钥列表</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Key</th>
+            <th>Status</th>
+            <th>Bound Device</th>
+            <th>Resume Expire</th>
+            <th>Used At</th>
+            <th>Last Event</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>操作日志</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    const logEl = document.getElementById("log");
+    const rowsEl = document.getElementById("rows");
+    const tokenEl = document.getElementById("token");
+    const tokenKey = "fast_openclaw_admin_token";
+
+    tokenEl.value = localStorage.getItem(tokenKey) || "";
+
+    function log(line) {
+      const now = new Date().toLocaleString();
+      logEl.textContent = "[" + now + "] " + line + "\n" + logEl.textContent;
+    }
+
+    function authHeaders() {
+      const token = localStorage.getItem(tokenKey) || "";
+      return {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      };
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        headers: {
+          ...authHeaders(),
+          ...(options.headers || {})
+        }
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        throw new Error((data && data.error && data.error.message) || ("HTTP " + res.status));
+      }
+      return data;
+    }
+
+    function statusTag(status) {
+      return '<span class="status s-' + status + '">' + status + "</span>";
+    }
+
+    function renderRows(items) {
+      rowsEl.innerHTML = items.map((item) => {
+        const ev = item.lastEvent ? item.lastEvent.stage + "/" + item.lastEvent.status : "-";
+        return '<tr>' +
+          '<td data-label="Label">' + (item.label || "-") + '</td>' +
+          '<td data-label="Key"><code>' + item.key + '</code></td>' +
+          '<td data-label="Status">' + statusTag(item.status) + '</td>' +
+          '<td data-label="Bound Device"><code>' + (item.boundFingerprintHash || "-") + '</code></td>' +
+          '<td data-label="Resume Expire">' + (item.resumeExpiresAt || "-") + '</td>' +
+          '<td data-label="Used At">' + (item.usedAt || "-") + '</td>' +
+          '<td data-label="Last Event">' + ev + '</td>' +
+          '<td data-label="Actions">' +
+            '<div class="actions">' +
+              '<button data-action="disable" data-id="' + item.id + '" class="secondary">Disable</button>' +
+              '<button data-action="reset" data-id="' + item.id + '">Reset</button>' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    async function refresh() {
+      try {
+        const data = await api("/admin/api/licenses");
+        renderRows(data.licenses || []);
+        log("license list refreshed");
+      } catch (e) {
+        log("refresh failed: " + e.message);
+      }
+    }
+
+    document.getElementById("saveToken").addEventListener("click", () => {
+      localStorage.setItem(tokenKey, tokenEl.value.trim());
+      log("token saved");
+    });
+
+    document.getElementById("refresh").addEventListener("click", refresh);
+
+    document.getElementById("create").addEventListener("click", async () => {
+      const label = document.getElementById("label").value.trim() || "default";
+      const count = Number(document.getElementById("count").value || "1");
+      try {
+        const data = await api("/admin/api/licenses", {
+          method: "POST",
+          body: JSON.stringify({ label, count })
+        });
+        log("created " + data.licenses.length + " license(s)");
+        await refresh();
+      } catch (e) {
+        log("create failed: " + e.message);
+      }
+    });
+
+    rowsEl.addEventListener("click", async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement)) {
+        return;
+      }
+      const action = target.getAttribute("data-action");
+      const id = target.getAttribute("data-id");
+      if (!action || !id) {
+        return;
+      }
+
+      try {
+        if (action === "disable") {
+          await api("/admin/api/licenses/" + id + "/disable", { method: "POST" });
+          log("disabled license " + id);
+        }
+        if (action === "reset") {
+          await api("/admin/api/licenses/" + id + "/reset", { method: "POST" });
+          log("reset license " + id);
+        }
+        await refresh();
+      } catch (e) {
+        log(action + " failed for " + id + ": " + e.message);
+      }
+    });
+
+    refresh();
+  </script>
+</body>
+</html>
