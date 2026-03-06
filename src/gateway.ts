@@ -125,6 +125,39 @@ interface AgentPayload {
 
 interface AgentRunResult {
   payloads?: AgentPayload[];
+  result?: {
+    payloads?: AgentPayload[];
+  };
+}
+
+function stripAnsi(input: string): string {
+  return input.replace(/\u001b\[[0-9;]*m/g, "");
+}
+
+function parseAgentRunResult(stdout: string): AgentRunResult | null {
+  const cleaned = stripAnsi(stdout).trim();
+  if (!cleaned) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(cleaned) as AgentRunResult;
+  } catch {
+    // Some OpenClaw versions may prepend/append warning text around JSON.
+  }
+
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start < 0 || end <= start) {
+    return null;
+  }
+
+  const candidate = cleaned.slice(start, end + 1);
+  try {
+    return JSON.parse(candidate) as AgentRunResult;
+  } catch {
+    return null;
+  }
 }
 
 export function summarizeAgentOutput(output: string, maxLines = 8): string {
@@ -143,15 +176,21 @@ export function summarizeAgentOutput(output: string, maxLines = 8): string {
 }
 
 export function hasAgentReply(stdout: string): boolean {
-  try {
-    const parsed = JSON.parse(stdout) as AgentRunResult;
-    if (!Array.isArray(parsed.payloads) || parsed.payloads.length === 0) {
-      return false;
-    }
-    return parsed.payloads.some((item) => typeof item?.text === "string" && item.text.trim().length > 0);
-  } catch {
+  const parsed = parseAgentRunResult(stdout);
+  if (!parsed) {
     return false;
   }
+
+  const payloads = [
+    ...(Array.isArray(parsed.payloads) ? parsed.payloads : []),
+    ...(Array.isArray(parsed.result?.payloads) ? parsed.result.payloads : [])
+  ];
+
+  if (payloads.length === 0) {
+    return false;
+  }
+
+  return payloads.some((item) => typeof item?.text === "string" && item.text.trim().length > 0);
 }
 
 export function hasGatewayFallbackSignal(output: string): boolean {
@@ -175,12 +214,13 @@ export async function verifyAgentConversation(logger: Logger): Promise<void> {
     "90"
   ]);
 
-  const combinedOutput = `${result.stdout}\n${result.stderr}`;
-  if (result.code !== 0 || hasGatewayFallbackSignal(combinedOutput) || !hasAgentReply(result.stdout)) {
-    const summary = summarizeAgentOutput(combinedOutput);
+  const fallbackDetected = hasGatewayFallbackSignal(result.stderr);
+  if (result.code !== 0 || fallbackDetected || !hasAgentReply(result.stdout)) {
+    const stdoutSummary = summarizeAgentOutput(result.stdout, 6);
+    const stderrSummary = summarizeAgentOutput(result.stderr, 6);
     throw new AppError(
       ErrorCodes.AGENT_CHECK_FAILED,
-      `OpenClaw gateway conversation check failed. Fallback-to-embedded is not allowed. Output summary: ${summary}`
+      `OpenClaw gateway conversation check failed. Fallback-to-embedded is not allowed. stdout: ${stdoutSummary}. stderr: ${stderrSummary}`
     );
   }
 

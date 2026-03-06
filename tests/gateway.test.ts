@@ -15,8 +15,31 @@ describe("hasAgentReply", () => {
     expect(hasAgentReply(stdout)).toBe(false);
   });
 
+  it("returns true when payload exists under result.payloads", () => {
+    const stdout = JSON.stringify({
+      runId: "2b76ef06-fa00-4b6a-802d-ae52907113b8",
+      status: "ok",
+      summary: "completed",
+      result: {
+        payloads: [{ text: "All systems operational." }]
+      }
+    });
+
+    expect(hasAgentReply(stdout)).toBe(true);
+  });
+
   it("returns false for invalid json", () => {
     expect(hasAgentReply("not-json")).toBe(false);
+  });
+
+  it("returns true when json is wrapped by warning text", () => {
+    const wrapped = [
+      "[warn] plugin mismatch",
+      "{\"payloads\":[{\"text\":\"ok from gateway\"}]}",
+      "[info] trailing line"
+    ].join("\n");
+
+    expect(hasAgentReply(wrapped)).toBe(true);
   });
 });
 
