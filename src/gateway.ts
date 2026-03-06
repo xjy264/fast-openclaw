@@ -127,6 +127,21 @@ interface AgentRunResult {
   payloads?: AgentPayload[];
 }
 
+export function summarizeAgentOutput(output: string, maxLines = 8): string {
+  const lines = output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, maxLines)
+    .map((line) => (line.length > 220 ? `${line.slice(0, 220)}...` : line));
+
+  if (lines.length === 0) {
+    return "no command output";
+  }
+
+  return lines.join(" | ");
+}
+
 export function hasAgentReply(stdout: string): boolean {
   try {
     const parsed = JSON.parse(stdout) as AgentRunResult;
@@ -162,9 +177,10 @@ export async function verifyAgentConversation(logger: Logger): Promise<void> {
 
   const combinedOutput = `${result.stdout}\n${result.stderr}`;
   if (result.code !== 0 || hasGatewayFallbackSignal(combinedOutput) || !hasAgentReply(result.stdout)) {
+    const summary = summarizeAgentOutput(combinedOutput);
     throw new AppError(
       ErrorCodes.AGENT_CHECK_FAILED,
-      "OpenClaw gateway conversation check failed. Fallback-to-embedded is not allowed."
+      `OpenClaw gateway conversation check failed. Fallback-to-embedded is not allowed. Output summary: ${summary}`
     );
   }
 

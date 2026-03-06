@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasAgentReply, hasGatewayFallbackSignal } from "../src/gateway.js";
+import { hasAgentReply, hasGatewayFallbackSignal, summarizeAgentOutput } from "../src/gateway.js";
 
 describe("hasAgentReply", () => {
   it("returns true when payload contains text", () => {
@@ -27,5 +27,16 @@ describe("hasGatewayFallbackSignal", () => {
 
   it("returns false for normal output", () => {
     expect(hasGatewayFallbackSignal("{\"payloads\":[{\"text\":\"ok\"}]}")).toBe(false);
+  });
+});
+
+describe("summarizeAgentOutput", () => {
+  it("returns first non-empty lines joined as summary", () => {
+    const output = "\nline-a\nline-b\nline-c\n";
+    expect(summarizeAgentOutput(output, 2)).toBe("line-a | line-b");
+  });
+
+  it("returns fallback text for empty output", () => {
+    expect(summarizeAgentOutput("   \n \n")).toBe("no command output");
   });
 });

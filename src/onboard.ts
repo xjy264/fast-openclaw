@@ -2,8 +2,22 @@ import { AppError, ErrorCodes } from "./errors.js";
 import { runCommand } from "./exec.js";
 import { Logger } from "./logger.js";
 
+function summarizeOutput(output: string, maxLines = 10): string {
+  const lines = output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, maxLines);
+
+  if (lines.length === 0) {
+    return "no command output";
+  }
+
+  return lines.join(" | ");
+}
+
 export async function runOnboardGuide(logger: Logger): Promise<void> {
-  logger.info("Starting OpenClaw onboard (non-interactive quickstart) ...");
+  logger.info("Starting OpenClaw onboard (strict non-interactive quickstart) ...");
 
   const nonInteractive = await runCommand(
     "openclaw",
@@ -14,30 +28,25 @@ export async function runOnboardGuide(logger: Logger): Promise<void> {
       "--accept-risk",
       "--flow",
       "quickstart",
+      "--mode",
+      "local",
       "--auth-choice",
       "skip",
       "--skip-skills",
       "--skip-channels",
-      "--skip-ui"
-    ],
-    { inheritStdio: true }
+      "--skip-ui",
+      "--skip-health"
+    ]
   );
 
   if (nonInteractive.code === 0) {
     return;
   }
 
-  logger.warn("Non-interactive onboard failed. Falling back to interactive wizard.");
-  logger.info("Follow these selections in the wizard:");
-  logger.info("1) Model config: choose skip for now (or any temp option)");
-  logger.info("2) Skills: choose skip for now");
-  logger.info("3) Hooks: press space to keep all unchecked, then confirm");
-
-  const interactive = await runCommand("openclaw", ["onboard", "--install-daemon"], {
-    inheritStdio: true
-  });
-
-  if (interactive.code !== 0) {
-    throw new AppError(ErrorCodes.ONBOARD_FAILED, "openclaw onboard failed.");
-  }
+  const summary = summarizeOutput(`${nonInteractive.stdout}\n${nonInteractive.stderr}`);
+  logger.error(`OpenClaw non-interactive onboard failed. Output summary: ${summary}`);
+  throw new AppError(
+    ErrorCodes.ONBOARD_FAILED,
+    `openclaw onboard non-interactive failed. Output summary: ${summary}`
+  );
 }

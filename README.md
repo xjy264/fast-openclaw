@@ -39,7 +39,7 @@ The CLI asks for one-time key first. Key must validate before install/config sta
 - One-time license gating before setup actions.
 - Resume flow with `--resume <token>` within backend time window.
 - OpenClaw install + version check + PATH auto-recovery (`zsh` and `bash`).
-- Non-interactive onboarding (`skip model/skills/channels/ui`) with daemon install.
+- Strict non-interactive onboarding (`--accept-risk`, `--mode local`, `skip model/skills/channels/ui/health`) with daemon install and no interactive fallback.
 - Model preset selection from five options (OpenAI/Claude/Gemini/GLM/Kimi).
 - Merge write to `~/.openclaw/openclaw.json`.
 - Model connectivity test immediately after model config write.
@@ -88,6 +88,10 @@ Additional option:
 - `--skip-telegram-bind`: debug only, skip Telegram bind step.
 - `--test-only <model|gateway|telegram|all>`: run isolated diagnostics without license/backend flow.
 - `--doctor`: interactive diagnostics menu; users can select model/gateway/telegram/full checks and see likely fixes.
+
+Onboarding behavior in v1:
+- CLI does not fall back to interactive onboarding.
+- If non-interactive onboard fails, setup exits with `ONBOARD_FAILED` and includes command output summary.
 
 Doctor mode usage:
 
