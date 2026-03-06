@@ -518,7 +518,10 @@ async function run(): Promise<void> {
     logger.error(`${appError.code}: ${appError.message}`);
     await sendEventSafe(api, state, "error", "failed", appError.message, appError.code);
 
-    logger.warn(`Setup interrupted. You can resume using: fast-openclaw --resume ${state.resumeToken}`);
+    logger.warn(`Setup interrupted. Resume token: ${state.resumeToken}`);
+    logger.warn(`Resume command (global): fast-openclaw --resume ${state.resumeToken}`);
+    logger.warn(`Resume command (npx): npx @your-scope/fast-openclaw --resume ${state.resumeToken}`);
+    logger.warn(`Resume command (repo dev): npm run dev -- --resume ${state.resumeToken}`);
     process.exitCode = 1;
   }
 }

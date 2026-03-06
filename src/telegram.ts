@@ -96,6 +96,11 @@ function normalizeText(text: string): string {
   return text.trim().toLowerCase().replace(/\s+/g, "");
 }
 
+export function isTelegramGetUpdatesConflict(description?: string): boolean {
+  const normalized = (description ?? "").toLowerCase();
+  return normalized.includes("terminated by other getupdates request");
+}
+
 export function extractChatCandidatesFromUpdates(updates: TelegramUpdate[]): TelegramChatCandidate[] {
   const map = new Map<string, TelegramChatCandidate>();
 
@@ -198,6 +203,14 @@ export async function discoverChatCandidates(
     });
 
     if (!updatesResp.ok) {
+      if (isTelegramGetUpdatesConflict(updatesResp.description)) {
+        logger.warn(
+          "Telegram getUpdates is occupied by another client. Retrying discovery (or pass --telegram-chat-id to skip auto discovery)."
+        );
+        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+        continue;
+      }
+
       throw new AppError(
         ErrorCodes.TELEGRAM_API_INVALID,
         `Telegram getUpdates failed: ${updatesResp.description ?? "unknown"}`
@@ -321,6 +334,13 @@ export async function verifyTelegramWeakSignals(
     timeout: 1
   });
   if (!baseline.ok) {
+    if (isTelegramGetUpdatesConflict(baseline.description)) {
+      logger.warn(
+        "Telegram weak validation skipped: getUpdates conflict detected (another bot consumer is active, usually OpenClaw gateway)."
+      );
+      return;
+    }
+
     throw new AppError(
       ErrorCodes.TELEGRAM_API_INVALID,
       `Telegram getUpdates failed: ${baseline.description ?? "unknown"}`
@@ -343,6 +363,13 @@ export async function verifyTelegramWeakSignals(
     });
 
     if (!updatesResp.ok) {
+      if (isTelegramGetUpdatesConflict(updatesResp.description)) {
+        logger.warn(
+          "Telegram weak validation skipped: getUpdates conflict detected during polling (another bot consumer is active)."
+        );
+        return;
+      }
+
       throw new AppError(
         ErrorCodes.TELEGRAM_API_INVALID,
         `Telegram getUpdates failed: ${updatesResp.description ?? "unknown"}`

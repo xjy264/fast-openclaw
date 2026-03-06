@@ -53,6 +53,7 @@ export function buildDoctorHints(error: unknown): DoctorHintBundle {
       summary: "Telegram bot token is invalid or Telegram API call failed.",
       hints: [
         "Confirm bot token format is correct and bot still exists.",
+        "If error contains `terminated by other getUpdates request`, stop other consumers for this bot token (or let fast-openclaw skip weak validation on conflict).",
         "Check network to `https://api.telegram.org`.",
         "Retry Telegram check with explicit token: `fast-openclaw --test-only telegram --telegram-bot-token <token> --debug`."
       ]

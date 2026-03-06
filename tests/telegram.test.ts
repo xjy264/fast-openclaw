@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractChatCandidatesFromUpdates,
   extractWeakSignalsFromUpdates,
+  isTelegramGetUpdatesConflict,
   type TelegramUpdate
 } from "../src/telegram.js";
 
@@ -105,5 +106,19 @@ describe("extractWeakSignalsFromUpdates", () => {
       askedWhoAmI: false,
       requestedModel: false
     });
+  });
+});
+
+describe("isTelegramGetUpdatesConflict", () => {
+  it("detects Telegram getUpdates exclusive polling conflict", () => {
+    expect(
+      isTelegramGetUpdatesConflict(
+        "Conflict: terminated by other getUpdates request; make sure that only one bot instance is running"
+      )
+    ).toBe(true);
+  });
+
+  it("returns false for unrelated telegram errors", () => {
+    expect(isTelegramGetUpdatesConflict("Bad Request: chat not found")).toBe(false);
   });
 });
