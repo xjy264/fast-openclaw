@@ -33,22 +33,22 @@ async function runGatewayCommand(action: "start" | "stop" | "restart"): Promise<
   });
 
   if (result.code !== 0) {
-    throw new AppError(ErrorCodes.GATEWAY_FAILED, `openclaw gateway ${action} failed.`);
+    throw new AppError(ErrorCodes.GATEWAY_FAILED, `openclaw gateway ${action} 执行失败。`);
   }
 }
 
 export async function startGateway(logger: Logger): Promise<void> {
-  logger.info("Starting gateway...");
+  logger.info("正在启动网关...");
   await runGatewayCommand("start");
 }
 
 export async function stopGateway(logger: Logger): Promise<void> {
-  logger.info("Stopping gateway...");
+  logger.info("正在停止网关...");
   await runGatewayCommand("stop");
 }
 
 export async function restartGateway(logger: Logger): Promise<void> {
-  logger.info("Restarting gateway...");
+  logger.info("正在重启网关...");
   await runGatewayCommand("restart");
 }
 
@@ -76,11 +76,11 @@ export async function verifyGatewayConnectivity(
   if (!token) {
     throw new AppError(
       ErrorCodes.GATEWAY_FAILED,
-      "Gateway token not found. Set FAST_OPENCLAW_GATEWAY_TOKEN or configure OpenClaw gateway auth token."
+      "未找到网关 token。请设置 FAST_OPENCLAW_GATEWAY_TOKEN，或在 OpenClaw 配置中设置 gateway.auth.token。"
     );
   }
 
-  logger.info(`Testing gateway connectivity at ${url} ...`);
+  logger.info(`正在测试网关连通性：${url} ...`);
 
   const maxAttempts = 8;
   const retryDelayMs = 1500;
@@ -96,7 +96,7 @@ export async function verifyGatewayConnectivity(
       });
 
       if (response.ok) {
-        logger.success("Gateway connectivity verified.");
+        logger.success("网关连通性校验通过。");
         return url;
       }
 
@@ -108,14 +108,14 @@ export async function verifyGatewayConnectivity(
     }
 
     if (attempt < maxAttempts) {
-      logger.warn(`Gateway not ready yet (attempt ${attempt}/${maxAttempts}). Retrying...`);
+      logger.warn(`网关尚未就绪（第 ${attempt}/${maxAttempts} 次）。正在重试...`);
       await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
     }
   }
 
   throw new AppError(
     ErrorCodes.GATEWAY_FAILED,
-    `Gateway connectivity test failed after ${maxAttempts} attempts: ${lastError}`
+    `网关连通性测试失败（重试 ${maxAttempts} 次）：${lastError}`
   );
 }
 
@@ -169,7 +169,7 @@ export function summarizeAgentOutput(output: string, maxLines = 8): string {
     .map((line) => (line.length > 220 ? `${line.slice(0, 220)}...` : line));
 
   if (lines.length === 0) {
-    return "no command output";
+    return "无命令输出";
   }
 
   return lines.join(" | ");
@@ -202,7 +202,7 @@ export function hasGatewayFallbackSignal(output: string): boolean {
 }
 
 export async function verifyAgentConversation(logger: Logger): Promise<void> {
-  logger.info("Checking OpenClaw conversation with `openclaw agent`...");
+  logger.info("正在用 `openclaw agent` 校验对话链路...");
   const result = await runCommand("openclaw", [
     "agent",
     "--agent",
@@ -220,9 +220,9 @@ export async function verifyAgentConversation(logger: Logger): Promise<void> {
     const stderrSummary = summarizeAgentOutput(result.stderr, 6);
     throw new AppError(
       ErrorCodes.AGENT_CHECK_FAILED,
-      `OpenClaw gateway conversation check failed. Fallback-to-embedded is not allowed. stdout: ${stdoutSummary}. stderr: ${stderrSummary}`
+      `OpenClaw gateway 对话校验失败。禁止回退到 embedded。stdout：${stdoutSummary}。stderr：${stderrSummary}`
     );
   }
 
-  logger.success("OpenClaw gateway conversation check passed.");
+  logger.success("OpenClaw 网关对话校验通过。");
 }

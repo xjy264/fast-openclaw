@@ -19,12 +19,12 @@ function asString(value: unknown): string {
 
 export function resolvePrimaryModelTarget(modelsConfig: unknown): ResolvedModelTarget {
   if (!isObject(modelsConfig) || !isObject(modelsConfig.providers)) {
-    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "Invalid models config: providers is missing.");
+    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "模型配置无效：缺少 providers。");
   }
 
   const providerEntry = Object.entries(modelsConfig.providers).find(([, cfg]) => isObject(cfg));
   if (!providerEntry) {
-    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "No model provider found in models config.");
+    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "模型配置中未找到可用 provider。");
   }
 
   const [providerName, providerConfigUnknown] = providerEntry;
@@ -37,17 +37,17 @@ export function resolvePrimaryModelTarget(modelsConfig: unknown): ResolvedModelT
   if (!baseUrl || !apiKey || !api) {
     throw new AppError(
       ErrorCodes.MODEL_TEST_FAILED,
-      "Model provider config requires baseUrl, apiKey, and api fields."
+      "模型 provider 配置必须包含 baseUrl、apiKey、api 字段。"
     );
   }
 
   if (!Array.isArray(models) || models.length === 0 || !isObject(models[0])) {
-    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "Model provider config requires models[0].");
+    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "模型 provider 配置必须包含 models[0]。");
   }
 
   const modelId = asString(models[0].id);
   if (!modelId) {
-    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "models[0].id is required for model test.");
+    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "模型连通性测试需要配置 models[0].id。");
   }
 
   return {
@@ -79,7 +79,7 @@ async function callOpenAICompletions(target: ResolvedModelTarget): Promise<void>
   if (!response.ok) {
     throw new AppError(
       ErrorCodes.MODEL_TEST_FAILED,
-      `Model test failed (${response.status}): ${bodyText || response.statusText}`
+      `模型测试失败（${response.status}）：${bodyText || response.statusText}`
     );
   }
 
@@ -87,11 +87,11 @@ async function callOpenAICompletions(target: ResolvedModelTarget): Promise<void>
   try {
     parsed = JSON.parse(bodyText);
   } catch {
-    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "Model test returned non-JSON response.");
+    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "模型测试返回了非 JSON 响应。");
   }
 
   if (!isObject(parsed) || !Array.isArray(parsed.choices) || parsed.choices.length === 0) {
-    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "Model test response has no choices.");
+    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "模型测试响应缺少 choices。");
   }
 }
 
@@ -123,7 +123,7 @@ async function callAnthropicMessages(target: ResolvedModelTarget): Promise<void>
   if (!response.ok) {
     throw new AppError(
       ErrorCodes.MODEL_TEST_FAILED,
-      `Model test failed (${response.status}): ${bodyText || response.statusText}`
+      `模型测试失败（${response.status}）：${bodyText || response.statusText}`
     );
   }
 
@@ -131,32 +131,32 @@ async function callAnthropicMessages(target: ResolvedModelTarget): Promise<void>
   try {
     parsed = JSON.parse(bodyText);
   } catch {
-    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "Model test returned non-JSON response.");
+    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "模型测试返回了非 JSON 响应。");
   }
 
   if (!isObject(parsed) || !Array.isArray(parsed.content) || parsed.content.length === 0) {
-    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "Model test response has no content.");
+    throw new AppError(ErrorCodes.MODEL_TEST_FAILED, "模型测试响应缺少 content。");
   }
 }
 
 export async function testModelConnectivity(modelsConfig: unknown, logger: Logger): Promise<void> {
   const target = resolvePrimaryModelTarget(modelsConfig);
-  logger.info(`Testing model connectivity (${target.providerName}/${target.modelId}) ...`);
+  logger.info(`正在测试模型连通性（${target.providerName}/${target.modelId}）...`);
 
   if (target.api === "openai-completions") {
     await callOpenAICompletions(target);
-    logger.success("Model connectivity test passed.");
+    logger.success("模型连通性测试通过。");
     return;
   }
 
   if (target.api === "anthropic-messages") {
     await callAnthropicMessages(target);
-    logger.success("Model connectivity test passed.");
+    logger.success("模型连通性测试通过。");
     return;
   }
 
   throw new AppError(
     ErrorCodes.MODEL_TEST_FAILED,
-    `Unsupported model api type for automated test: ${target.api}`
+    `自动化测试暂不支持该模型 API 类型：${target.api}`
   );
 }

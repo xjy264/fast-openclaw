@@ -43,7 +43,7 @@ function coerceTextValue(field: SchemaField, value: string): string | number | b
     if (!Number.isFinite(parsed)) {
       throw new AppError(
         ErrorCodes.CONFIG_VALIDATION_FAILED,
-        `Environment value for ${envKeyForField(field.key)} must be a number.`
+        `环境变量 ${envKeyForField(field.key)} 必须是数字。`
       );
     }
     return parsed;
@@ -59,7 +59,7 @@ function coerceTextValue(field: SchemaField, value: string): string | number | b
     }
     throw new AppError(
       ErrorCodes.CONFIG_VALIDATION_FAILED,
-      `Environment value for ${envKeyForField(field.key)} must be boolean.`
+      `环境变量 ${envKeyForField(field.key)} 必须是布尔值。`
     );
   }
 
@@ -81,7 +81,7 @@ function resolvePrefilledFieldValue(field: SchemaField): unknown {
 }
 
 async function askField(field: SchemaField): Promise<unknown> {
-  const message = field.required ? `${field.label} (required)` : field.label;
+  const message = field.required ? `${field.label}（必填）` : field.label;
 
   switch (field.type) {
     case "password":
@@ -90,7 +90,7 @@ async function askField(field: SchemaField): Promise<unknown> {
         mask: "*",
         validate: (value) => {
           if (field.required && !value.trim()) {
-            return `${field.label} is required`;
+            return `请填写：${field.label}`;
           }
           return true;
         }
@@ -106,7 +106,7 @@ async function askField(field: SchemaField): Promise<unknown> {
       if (!field.options || field.options.length === 0) {
         throw new AppError(
           ErrorCodes.CONFIG_SCHEMA_INVALID,
-          `Select field ${field.key} is missing options.`
+          `下拉字段 ${field.key} 缺少 options 配置。`
         );
       }
       return select({
@@ -121,9 +121,9 @@ async function askField(field: SchemaField): Promise<unknown> {
         default: field.default !== undefined ? String(field.default) : undefined,
         validate: (value) => {
           if (!value.trim()) {
-            return field.required ? `${field.label} is required` : true;
+            return field.required ? `请填写：${field.label}` : true;
           }
-          return Number.isFinite(Number(value)) || `${field.label} must be a number`;
+          return Number.isFinite(Number(value)) || `${field.label} 必须是数字`;
         }
       });
       if (!raw.trim()) {
@@ -139,7 +139,7 @@ async function askField(field: SchemaField): Promise<unknown> {
         default: field.default !== undefined ? String(field.default) : undefined,
         validate: (value) => {
           if (field.required && !value.trim()) {
-            return `${field.label} is required`;
+            return `请填写：${field.label}`;
           }
           return true;
         }
@@ -165,7 +165,7 @@ function validateModelsNode(node: unknown): void {
         if (!isObject(entry)) {
           throw new AppError(
             ErrorCodes.CONFIG_VALIDATION_FAILED,
-            "Each models[] entry must be an object with id and name."
+            "models[] 每个条目都必须是对象，并包含 id 和 name。"
           );
         }
         const id = entry.id;
@@ -173,7 +173,7 @@ function validateModelsNode(node: unknown): void {
         if (typeof id !== "string" || !id || typeof name !== "string" || !name) {
           throw new AppError(
             ErrorCodes.CONFIG_VALIDATION_FAILED,
-            "models[] entry must contain both non-empty id and name."
+            "models[] 条目必须同时包含非空 id 和 name。"
           );
         }
       }
@@ -184,14 +184,14 @@ function validateModelsNode(node: unknown): void {
 
 function assertSchema(schema: ModelSchema): void {
   if (!schema || !Array.isArray(schema.options) || schema.options.length === 0) {
-    throw new AppError(ErrorCodes.CONFIG_SCHEMA_INVALID, "Backend model schema is empty.");
+    throw new AppError(ErrorCodes.CONFIG_SCHEMA_INVALID, "后端返回的模型 schema 为空。");
   }
 
   for (const option of schema.options) {
     if (!option.id || !option.name || !option.configTemplate || !Array.isArray(option.fields)) {
       throw new AppError(
         ErrorCodes.CONFIG_SCHEMA_INVALID,
-        "Model schema option is missing id/name/configTemplate/fields."
+        "模型 schema 选项缺少 id/name/configTemplate/fields。"
       );
     }
   }
@@ -204,7 +204,7 @@ export async function collectModelConfig(schema: ModelSchema): Promise<Interacti
     schema.options.length === 1
       ? schema.options[0]
       : await select<ModelOption>({
-          message: "Select model preset",
+          message: "请选择模型预设",
           choices: schema.options.map((option) => ({
             name: option.description ? `${option.name} - ${option.description}` : option.name,
             value: option
@@ -231,7 +231,7 @@ export async function collectModelConfig(schema: ModelSchema): Promise<Interacti
   validateModelsNode(modelsConfig);
 
   if (!isObject(modelsConfig)) {
-    throw new AppError(ErrorCodes.CONFIG_VALIDATION_FAILED, "Generated model config must be an object.");
+    throw new AppError(ErrorCodes.CONFIG_VALIDATION_FAILED, "生成的模型配置必须是对象。");
   }
 
   return {
@@ -248,7 +248,7 @@ export function validateModelsConfig(modelsConfig: unknown): void {
 export function renderTemplate(template: Record<string, unknown>, values: Record<string, unknown>): Record<string, unknown> {
   const interpolated = interpolateValue(template, values);
   if (!isObject(interpolated)) {
-    throw new AppError(ErrorCodes.CONFIG_VALIDATION_FAILED, "Interpolated config must be object.");
+    throw new AppError(ErrorCodes.CONFIG_VALIDATION_FAILED, "模板渲染后的配置必须是对象。");
   }
   return interpolated;
 }

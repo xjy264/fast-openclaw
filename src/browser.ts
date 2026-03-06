@@ -23,8 +23,8 @@ export async function buildBrowserConfigPatch(): Promise<BrowserSetupResult> {
   if (!chromeExists) {
     return {
       enabled: false,
-      message:
-        "Chrome not found at /Applications/Google Chrome.app. Skipping browser config. Install Chrome later and re-run gateway restart."
+    message:
+        "未在 /Applications/Google Chrome.app 找到 Chrome。已跳过浏览器配置。安装 Chrome 后可重新执行 gateway restart。"
     };
   }
 
@@ -37,6 +37,6 @@ export async function buildBrowserConfigPatch(): Promise<BrowserSetupResult> {
         executablePath: CHROME_EXECUTABLE_PATH
       }
     },
-    message: "Chrome detected. Browser isolated profile configured."
+    message: "已检测到 Chrome，已写入独立浏览器配置档。"
   };
 }

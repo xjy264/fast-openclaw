@@ -2,23 +2,30 @@ export type SetupPhase =
   | "init"
   | "license_validated"
   | "installed"
-  | "onboarded"
   | "configured"
   | "model_verified"
   | "gateway_verified"
-  | "telegram_bound"
+  | "channel_bound"
   | "completed";
+
+export type ChannelType = "telegram" | "dingtalk";
 
 export interface CliOptions {
   apiBase?: string;
   resume?: string;
   debug?: boolean;
   doctor?: boolean;
+  channel?: ChannelType;
   skipOpenclawReset?: boolean;
   telegramBotToken?: string;
   telegramChatId?: string;
+  dingtalkClientId?: string;
+  dingtalkClientSecret?: string;
+  dingtalkRobotCode?: string;
+  dingtalkCorpId?: string;
+  dingtalkAgentId?: string;
   skipTelegramBind?: boolean;
-  testOnly?: "model" | "gateway" | "telegram" | "all";
+  testOnly?: "model" | "gateway" | "telegram" | "dingtalk" | "all";
 }
 
 export interface TelemetryEvent {
@@ -110,6 +117,7 @@ export interface SessionCompleteRequest {
     gatewayUrl: string;
     browserEnabled: boolean;
     modelId: string;
+    channelType?: ChannelType;
     telegramChatId?: string;
   };
 }
@@ -122,8 +130,10 @@ export interface SetupState {
   openclawVersion?: string;
   gatewayUrl?: string;
   browserEnabled?: boolean;
+  channelType?: ChannelType;
   telegramChatId?: string;
   telegramBoundAt?: string;
+  channelBoundAt?: string;
   deviceFingerprintHash: string;
   updatedAt: string;
 }

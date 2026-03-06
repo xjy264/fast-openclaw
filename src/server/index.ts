@@ -7,7 +7,7 @@ import { JsonStore } from "./store.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const host = process.env.HOST ?? "0.0.0.0";
-const adminToken = process.env.FAST_OPENCLAW_ADMIN_TOKEN ?? "change-me";
+const adminToken = process.env.FAST_OPENCLAW_ADMIN_TOKEN ?? "请修改此默认token";
 const resumeWindowHours = Number(process.env.FAST_OPENCLAW_RESUME_HOURS ?? "24");
 const gatewayUrl = process.env.FAST_OPENCLAW_GATEWAY_URL;
 const gatewayToken = process.env.FAST_OPENCLAW_GATEWAY_TOKEN;
@@ -49,7 +49,7 @@ function handleError(res: Response, error: unknown): void {
     return;
   }
 
-  const message = error instanceof Error ? error.message : "unknown server error";
+  const message = error instanceof Error ? error.message : "未知服务端错误";
   res.status(500).json({
     ok: false,
     error: {
@@ -67,7 +67,7 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
       ok: false,
       error: {
         code: "UNAUTHORIZED",
-        message: "admin token invalid"
+        message: "管理员 token 无效"
       }
     });
     return;
@@ -162,7 +162,7 @@ app.get("/admin/api/licenses", requireAdmin, async (_req, res) => {
 app.post("/admin/api/licenses", requireAdmin, async (req, res) => {
   try {
     const count = Number(req.body?.count ?? 1);
-    const label = String(req.body?.label ?? "default");
+    const label = String(req.body?.label ?? "默认");
     const licenses = await service.createLicenses(count, label);
     res.json({ ok: true, licenses });
   } catch (error) {
@@ -190,9 +190,9 @@ app.post("/admin/api/licenses/:id/reset", requireAdmin, async (req, res) => {
 
 app.listen(port, host, () => {
   // eslint-disable-next-line no-console
-  console.log(`fast-openclaw-server listening on http://${host}:${port}`);
+  console.log(`fast-openclaw-server 已启动：http://${host}:${port}`);
   // eslint-disable-next-line no-console
-  console.log(`admin page: http://${host}:${port}/admin`);
+  console.log(`管理后台：http://${host}:${port}/admin`);
   // eslint-disable-next-line no-console
-  console.log(`data file: ${dataFile}`);
+  console.log(`数据文件：${dataFile}`);
 });

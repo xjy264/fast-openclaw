@@ -12,6 +12,7 @@
   "files": [
     "dist",
     "public",
+    "scripts",
     "README.md",
     "LICENSE"
   ],
@@ -20,6 +21,7 @@
     "build": "npm run clean && tsc -p tsconfig.json",
     "dev": "tsx src/index.ts",
     "dev:server": "tsx src/server/index.ts",
+    "setup:dingtalk": "bash scripts/setup-dingtalk.sh",
     "start:server": "node dist/server/index.js",
     "test": "vitest run",
     "test:watch": "vitest",

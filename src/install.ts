@@ -31,7 +31,7 @@ async function ensureRcLines(rcPath: string, lines: string[]): Promise<void> {
 async function getNpmGlobalBin(): Promise<string> {
   const result = await runCommand("npm", ["prefix", "-g"]);
   if (result.code !== 0 || !result.stdout) {
-    throw new AppError(ErrorCodes.PATH_FIX_FAILED, "Failed to detect npm global prefix.");
+    throw new AppError(ErrorCodes.PATH_FIX_FAILED, "无法检测 npm 全局安装前缀。");
   }
   return path.join(result.stdout.trim(), "bin");
 }
@@ -46,12 +46,12 @@ function updateProcessPath(extraPaths: string[]): void {
 }
 
 export async function installOpenClaw(logger: Logger): Promise<void> {
-  logger.info("Installing OpenClaw...");
+  logger.info("正在安装 OpenClaw...");
   const result = await runCommand("bash", ["-lc", OPENCLAW_INSTALL_CMD], {
     inheritStdio: true
   });
   if (result.code !== 0) {
-    throw new AppError(ErrorCodes.INSTALL_FAILED, "OpenClaw install command failed.");
+    throw new AppError(ErrorCodes.INSTALL_FAILED, "OpenClaw 安装命令执行失败。");
   }
 }
 
@@ -67,7 +67,7 @@ export async function readOpenClawVersion(): Promise<string | null> {
 }
 
 export async function fixPathAndRetryVersion(logger: Logger): Promise<string> {
-  logger.warn("openclaw command not found. Applying PATH recovery for zsh/bash...");
+  logger.warn("未找到 openclaw 命令，正在为 zsh/bash 自动修复 PATH...");
 
   const npmBin = await getNpmGlobalBin();
   const localBin = path.join(os.homedir(), ".local", "bin");
@@ -86,7 +86,7 @@ export async function fixPathAndRetryVersion(logger: Logger): Promise<string> {
   if (!version) {
     throw new AppError(
       ErrorCodes.VERSION_NOT_FOUND,
-      "OpenClaw still unavailable after PATH recovery. Reopen terminal or run source ~/.zshrc and retry."
+      "PATH 修复后仍无法使用 OpenClaw。请重开终端或执行 `source ~/.zshrc` 后重试。"
     );
   }
 
@@ -94,7 +94,7 @@ export async function fixPathAndRetryVersion(logger: Logger): Promise<string> {
 }
 
 export async function resetOpenClawState(logger: Logger): Promise<void> {
-  logger.warn("Resetting existing OpenClaw config/state for a clean reinstall...");
+  logger.warn("正在重置现有 OpenClaw 配置/状态，确保干净重装...");
   const result = await runCommand(
     "openclaw",
     ["reset", "--scope", "full", "--non-interactive", "--yes"],
@@ -102,6 +102,6 @@ export async function resetOpenClawState(logger: Logger): Promise<void> {
   );
 
   if (result.code !== 0) {
-    throw new AppError(ErrorCodes.INSTALL_FAILED, "Failed to reset OpenClaw state.");
+    throw new AppError(ErrorCodes.INSTALL_FAILED, "重置 OpenClaw 状态失败。");
   }
 }

@@ -44,7 +44,7 @@ export function runCommand(
         });
         return;
       }
-      reject(new AppError(ErrorCodes.UNKNOWN, `Command failed to start: ${command}`, error));
+      reject(new AppError(ErrorCodes.UNKNOWN, `命令启动失败：${command}`, error));
     });
 
     child.on("close", (code) => {

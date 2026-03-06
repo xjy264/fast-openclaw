@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>fast-openclaw Admin</title>
+  <title>fast-openclaw 管理后台</title>
   <style>
     :root {
       --bg: #f7f8fb;
@@ -133,17 +133,17 @@
       <h1>fast-openclaw 管理后台</h1>
       <div class="grid">
         <div class="field w4">
-          <label>Admin Token</label>
+          <label>管理员 Token</label>
           <input id="token" type="password" placeholder="FAST_OPENCLAW_ADMIN_TOKEN" />
         </div>
         <div class="field w3">
-          <button id="saveToken">保存 Token</button>
+          <button id="saveToken">保存令牌</button>
         </div>
         <div class="field w3">
           <button id="refresh" class="secondary">刷新列表</button>
         </div>
       </div>
-      <p class="muted">Token 仅保存在浏览器 localStorage。API 需要 Authorization: Bearer &lt;token&gt;。</p>
+      <p class="muted">令牌仅保存在浏览器 localStorage。API 需携带 Authorization: Bearer &lt;token&gt;。</p>
     </div>
 
     <div class="card">
@@ -168,14 +168,14 @@
       <table>
         <thead>
           <tr>
-            <th>Label</th>
-            <th>Key</th>
-            <th>Status</th>
-            <th>Bound Device</th>
-            <th>Resume Expire</th>
-            <th>Used At</th>
-            <th>Last Event</th>
-            <th>Actions</th>
+            <th>标签</th>
+            <th>密钥</th>
+            <th>状态</th>
+            <th>绑定设备</th>
+            <th>恢复过期时间</th>
+            <th>使用时间</th>
+            <th>最新事件</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -233,17 +233,17 @@
       rowsEl.innerHTML = items.map((item) => {
         const ev = item.lastEvent ? item.lastEvent.stage + "/" + item.lastEvent.status : "-";
         return '<tr>' +
-          '<td data-label="Label">' + (item.label || "-") + '</td>' +
-          '<td data-label="Key"><code>' + item.key + '</code></td>' +
-          '<td data-label="Status">' + statusTag(item.status) + '</td>' +
-          '<td data-label="Bound Device"><code>' + (item.boundFingerprintHash || "-") + '</code></td>' +
-          '<td data-label="Resume Expire">' + (item.resumeExpiresAt || "-") + '</td>' +
-          '<td data-label="Used At">' + (item.usedAt || "-") + '</td>' +
-          '<td data-label="Last Event">' + ev + '</td>' +
-          '<td data-label="Actions">' +
+          '<td data-label="标签">' + (item.label || "-") + '</td>' +
+          '<td data-label="密钥"><code>' + item.key + '</code></td>' +
+          '<td data-label="状态">' + statusTag(item.status) + '</td>' +
+          '<td data-label="绑定设备"><code>' + (item.boundFingerprintHash || "-") + '</code></td>' +
+          '<td data-label="恢复过期时间">' + (item.resumeExpiresAt || "-") + '</td>' +
+          '<td data-label="使用时间">' + (item.usedAt || "-") + '</td>' +
+          '<td data-label="最新事件">' + ev + '</td>' +
+          '<td data-label="操作">' +
             '<div class="actions">' +
-              '<button data-action="disable" data-id="' + item.id + '" class="secondary">Disable</button>' +
-              '<button data-action="reset" data-id="' + item.id + '">Reset</button>' +
+              '<button data-action="disable" data-id="' + item.id + '" class="secondary">禁用</button>' +
+              '<button data-action="reset" data-id="' + item.id + '">重置</button>' +
             '</div>' +
           '</td>' +
         '</tr>';
@@ -254,31 +254,31 @@
       try {
         const data = await api("/admin/api/licenses");
         renderRows(data.licenses || []);
-        log("license list refreshed");
+        log("密钥列表已刷新");
       } catch (e) {
-        log("refresh failed: " + e.message);
+        log("刷新失败：" + e.message);
       }
     }
 
     document.getElementById("saveToken").addEventListener("click", () => {
       localStorage.setItem(tokenKey, tokenEl.value.trim());
-      log("token saved");
+      log("令牌已保存");
     });
 
     document.getElementById("refresh").addEventListener("click", refresh);
 
     document.getElementById("create").addEventListener("click", async () => {
-      const label = document.getElementById("label").value.trim() || "default";
+      const label = document.getElementById("label").value.trim() || "默认";
       const count = Number(document.getElementById("count").value || "1");
       try {
         const data = await api("/admin/api/licenses", {
           method: "POST",
           body: JSON.stringify({ label, count })
         });
-        log("created " + data.licenses.length + " license(s)");
+        log("已创建 " + data.licenses.length + " 个密钥");
         await refresh();
       } catch (e) {
-        log("create failed: " + e.message);
+        log("创建失败：" + e.message);
       }
     });
 
@@ -296,15 +296,15 @@
       try {
         if (action === "disable") {
           await api("/admin/api/licenses/" + id + "/disable", { method: "POST" });
-          log("disabled license " + id);
+          log("已禁用密钥 " + id);
         }
         if (action === "reset") {
           await api("/admin/api/licenses/" + id + "/reset", { method: "POST" });
-          log("reset license " + id);
+          log("已重置密钥 " + id);
         }
         await refresh();
       } catch (e) {
-        log(action + " failed for " + id + ": " + e.message);
+        log("操作失败（" + action + " / " + id + "）： " + e.message);
       }
     });
 

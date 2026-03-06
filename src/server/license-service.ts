@@ -92,7 +92,7 @@ export class LicenseService {
 
   private payloadFromLicense(license: LicenseRecord): SessionResponsePayload {
     if (!license.sessionId || !license.resumeToken || !license.resumeExpiresAt) {
-      throw new ServiceError("SESSION_INVALID", 500, "License session fields are incomplete.");
+      throw new ServiceError("SESSION_INVALID", 500, "License 会话字段不完整。");
     }
 
     return {
@@ -109,7 +109,7 @@ export class LicenseService {
 
   async createLicenses(count: number, label: string): Promise<PublicLicense[]> {
     if (!Number.isInteger(count) || count <= 0 || count > 200) {
-      throw new ServiceError("COUNT_INVALID", 400, "count must be an integer between 1 and 200");
+      throw new ServiceError("COUNT_INVALID", 400, "count 必须是 1 到 200 之间的整数");
     }
 
     return this.store.withWrite((db) => {
@@ -146,7 +146,7 @@ export class LicenseService {
     return this.store.withWrite((db) => {
       const license = db.licenses.find((item) => item.id === id);
       if (!license) {
-        throw new ServiceError("LICENSE_NOT_FOUND", 404, "License not found");
+        throw new ServiceError("LICENSE_NOT_FOUND", 404, "未找到 License");
       }
       license.status = "DISABLED";
       license.updatedAt = nowIso();
@@ -158,7 +158,7 @@ export class LicenseService {
     return this.store.withWrite((db) => {
       const license = db.licenses.find((item) => item.id === id);
       if (!license) {
-        throw new ServiceError("LICENSE_NOT_FOUND", 404, "License not found");
+        throw new ServiceError("LICENSE_NOT_FOUND", 404, "未找到 License");
       }
 
       const nextKey = generateLicenseKey();
@@ -180,34 +180,34 @@ export class LicenseService {
 
   async startSession(licenseKey: string, fingerprintHash: string): Promise<SessionResponsePayload> {
     if (!licenseKey || !fingerprintHash) {
-      throw new ServiceError("REQUEST_INVALID", 400, "licenseKey and deviceFingerprint are required");
+      throw new ServiceError("REQUEST_INVALID", 400, "licenseKey 和 deviceFingerprint 为必填");
     }
 
     return this.store.withWrite((db) => {
       const keyHash = sha256(licenseKey.trim());
       const license = db.licenses.find((item) => item.keyHash === keyHash);
       if (!license) {
-        throw new ServiceError("LICENSE_INVALID", 401, "Invalid license key");
+        throw new ServiceError("LICENSE_INVALID", 401, "License Key 无效");
       }
 
       const now = Date.now();
 
       if (license.status === "DISABLED") {
-        throw new ServiceError("LICENSE_DISABLED", 403, "License is disabled");
+        throw new ServiceError("LICENSE_DISABLED", 403, "License 已被禁用");
       }
 
       if (license.status === "USED") {
-        throw new ServiceError("LICENSE_USED", 410, "License already consumed");
+        throw new ServiceError("LICENSE_USED", 410, "License 已被使用");
       }
 
       if (license.status === "IN_USE") {
         if (license.boundFingerprintHash !== fingerprintHash) {
-          throw new ServiceError("DEVICE_MISMATCH", 409, "License is already bound to another device");
+          throw new ServiceError("DEVICE_MISMATCH", 409, "License 已绑定其他设备");
         }
 
         const exp = parseDate(license.resumeExpiresAt);
         if (!exp || exp < now) {
-          throw new ServiceError("RESUME_EXPIRED", 410, "License session expired, ask admin to reset");
+          throw new ServiceError("RESUME_EXPIRED", 410, "License 会话已过期，请联系管理员重置");
         }
 
         return this.payloadFromLicense(license);
@@ -227,27 +227,27 @@ export class LicenseService {
 
   async resumeSession(resumeToken: string, fingerprintHash: string): Promise<SessionResponsePayload> {
     if (!resumeToken || !fingerprintHash) {
-      throw new ServiceError("REQUEST_INVALID", 400, "resumeToken and deviceFingerprint are required");
+      throw new ServiceError("REQUEST_INVALID", 400, "resumeToken 和 deviceFingerprint 为必填");
     }
 
     const db = await this.store.read();
     const license = db.licenses.find((item) => item.resumeToken === resumeToken);
     if (!license) {
-      throw new ServiceError("SESSION_INVALID", 401, "Invalid resume token");
+      throw new ServiceError("SESSION_INVALID", 401, "resume token 无效");
     }
 
     if (license.status !== "IN_USE") {
-      throw new ServiceError("SESSION_INVALID", 409, "License is not resumable");
+      throw new ServiceError("SESSION_INVALID", 409, "当前 License 状态不可恢复");
     }
 
     if (license.boundFingerprintHash !== fingerprintHash) {
-      throw new ServiceError("DEVICE_MISMATCH", 409, "Resume token is bound to another device");
+      throw new ServiceError("DEVICE_MISMATCH", 409, "resume token 已绑定其他设备");
     }
 
     const now = Date.now();
     const exp = parseDate(license.resumeExpiresAt);
     if (!exp || exp < now) {
-      throw new ServiceError("RESUME_EXPIRED", 410, "Resume token expired");
+      throw new ServiceError("RESUME_EXPIRED", 410, "resume token 已过期");
     }
 
     return this.payloadFromLicense(license);
@@ -266,7 +266,7 @@ export class LicenseService {
         (item) => item.sessionId === sessionId && item.resumeToken === resumeToken
       );
       if (!license) {
-        throw new ServiceError("SESSION_INVALID", 401, "Session not found");
+        throw new ServiceError("SESSION_INVALID", 401, "未找到会话");
       }
 
       license.events.push({
@@ -282,7 +282,7 @@ export class LicenseService {
       }
 
       if (status === "failed") {
-        license.lastError = message ?? errorCode ?? "unknown";
+        license.lastError = message ?? errorCode ?? "未知错误";
       }
 
       license.updatedAt = nowIso();
@@ -295,11 +295,11 @@ export class LicenseService {
         (item) => item.sessionId === sessionId && item.resumeToken === resumeToken
       );
       if (!license) {
-        throw new ServiceError("SESSION_INVALID", 401, "Session not found");
+        throw new ServiceError("SESSION_INVALID", 401, "未找到会话");
       }
 
       if (license.status !== "IN_USE") {
-        throw new ServiceError("SESSION_INVALID", 409, "Session cannot be completed");
+        throw new ServiceError("SESSION_INVALID", 409, "当前会话状态不可完成");
       }
 
       license.status = "USED";

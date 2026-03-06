@@ -1,4 +1,4 @@
-import { password, select } from "@inquirer/prompts";
+import { input, password, select } from "@inquirer/prompts";
 import { mergeAndWriteConfig } from "./config.js";
 import { AppError, ErrorCodes } from "./errors.js";
 import { runCommand } from "./exec.js";
@@ -83,7 +83,7 @@ async function callTelegram<T>(
     return {
       ok: false,
       error_code: response.status,
-      description: "Telegram API returned non-JSON response"
+      description: "Telegram API 返回了非 JSON 响应"
     };
   }
 }
@@ -169,15 +169,15 @@ export function extractWeakSignalsFromUpdates(
 }
 
 export async function validateBotToken(token: string, logger: Logger): Promise<TelegramUser> {
-  logger.info("Validating Telegram bot token...");
+  logger.info("正在校验 Telegram 机器人 Token...");
   const result = await callTelegram<TelegramUser>(token, "getMe");
   if (!result.ok) {
     throw new AppError(
       ErrorCodes.TELEGRAM_API_INVALID,
-      `Telegram token invalid: ${result.description ?? "unknown error"}`
+      `Telegram token 无效：${result.description ?? "未知错误"}`
     );
   }
-  logger.success(`Telegram bot validated: @${result.result.username ?? result.result.id}`);
+  logger.success(`Telegram 机器人校验通过：@${result.result.username ?? result.result.id}`);
   return result.result;
 }
 
@@ -189,7 +189,7 @@ export async function discoverChatCandidates(
   const timeoutMs = options?.timeoutMs ?? 90000;
   const pollIntervalMs = options?.pollIntervalMs ?? 2500;
 
-  logger.info("Please send /start to your Telegram bot now (or send a message in target chat). Waiting for updates...");
+  logger.info("请先在 Telegram 给机器人发送 /start（或在目标群发一条消息），正在等待更新...");
 
   const deadline = Date.now() + timeoutMs;
   const seen = new Map<string, TelegramChatCandidate>();
@@ -205,7 +205,7 @@ export async function discoverChatCandidates(
     if (!updatesResp.ok) {
       if (isTelegramGetUpdatesConflict(updatesResp.description)) {
         logger.warn(
-          "Telegram getUpdates is occupied by another client. Retrying discovery (or pass --telegram-chat-id to skip auto discovery)."
+          "Telegram getUpdates 正被其他客户端占用，正在重试发现（也可传 --telegram-chat-id 跳过自动发现）。"
         );
         await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
         continue;
@@ -213,7 +213,7 @@ export async function discoverChatCandidates(
 
       throw new AppError(
         ErrorCodes.TELEGRAM_API_INVALID,
-        `Telegram getUpdates failed: ${updatesResp.description ?? "unknown"}`
+        `Telegram getUpdates 调用失败：${updatesResp.description ?? "未知错误"}`
       );
     }
 
@@ -238,13 +238,13 @@ export async function discoverChatCandidates(
 
   throw new AppError(
     ErrorCodes.TELEGRAM_DISCOVERY_TIMEOUT,
-    "No Telegram chat discovered in time. Send /start to bot and retry resume."
+    "超时未发现 Telegram 会话。请给机器人发送 /start 后再 resume 重试。"
   );
 }
 
 export async function selectChatId(candidates: TelegramChatCandidate[]): Promise<string> {
   if (candidates.length === 0) {
-    throw new AppError(ErrorCodes.TELEGRAM_DISCOVERY_TIMEOUT, "No Telegram chat candidates found.");
+    throw new AppError(ErrorCodes.TELEGRAM_DISCOVERY_TIMEOUT, "未发现可绑定的 Telegram 会话。");
   }
 
   if (candidates.length === 1) {
@@ -252,7 +252,7 @@ export async function selectChatId(candidates: TelegramChatCandidate[]): Promise
   }
 
   return select<string>({
-    message: "Select Telegram chat to bind",
+    message: "请选择要绑定的 Telegram 会话",
     choices: candidates.map((item) => ({
       name: `${item.displayName} [${item.type}] (${item.chatId})${item.lastMessage ? ` - ${item.lastMessage}` : ""}`,
       value: item.chatId
@@ -266,25 +266,38 @@ export async function getBotTokenFromInput(prefilled?: string): Promise<string> 
   }
 
   const token = await password({
-    message: "Telegram bot token",
+    message: "请输入 Telegram 机器人 Token",
     mask: "*",
-    validate: (value) => (value.trim() ? true : "Telegram bot token is required")
+    validate: (value) => (value.trim() ? true : "Telegram 机器人 Token 不能为空")
   });
   return token.trim();
+}
+
+export async function getChatIdFromInput(prefilled?: string): Promise<string> {
+  if (prefilled?.trim()) {
+    return prefilled.trim();
+  }
+
+  const chatId = await input({
+    message: "请输入 Telegram chat id",
+    validate: (value) => (value.trim() ? true : "Telegram chat id 不能为空")
+  });
+
+  return chatId.trim();
 }
 
 export async function configureOpenClawTelegram(
   token: string,
   logger: Logger
 ): Promise<void> {
-  logger.info("Configuring OpenClaw telegram channel...");
+  logger.info("正在配置 OpenClaw Telegram 渠道...");
   const result = await runCommand("openclaw", ["channels", "add", "--channel", "telegram", "--token", token]);
   if (result.code === 0) {
-    logger.success("Telegram channel configured via `openclaw channels add`.");
+    logger.success("已通过 `openclaw channels add` 完成 Telegram 渠道配置。");
     return;
   }
 
-  logger.warn("`openclaw channels add` failed, falling back to openclaw.json patch.");
+  logger.warn("`openclaw channels add` 失败，正在回退为直接补丁写入 openclaw.json。");
   await mergeAndWriteConfig({
     channels: {
       telegram: {
@@ -293,7 +306,7 @@ export async function configureOpenClawTelegram(
       }
     }
   });
-  logger.success("Telegram channel configured via openclaw.json patch fallback.");
+  logger.success("已通过 openclaw.json 补丁回退方式完成 Telegram 渠道配置。");
 }
 
 export async function sendTelegramTestMessage(
@@ -301,7 +314,7 @@ export async function sendTelegramTestMessage(
   chatId: string,
   logger: Logger
 ): Promise<void> {
-  logger.info(`Sending Telegram test message to chat ${chatId} ...`);
+  logger.info(`正在向 Telegram 会话 ${chatId} 发送测试消息...`);
   const resp = await callTelegram<{ message_id: number }>(token, "sendMessage", {
     chat_id: chatId,
     text: "✅ fast-openclaw telegram test"
@@ -310,11 +323,11 @@ export async function sendTelegramTestMessage(
   if (!resp.ok) {
     throw new AppError(
       ErrorCodes.TELEGRAM_BIND_FAILED,
-      `Telegram test send failed: ${resp.description ?? "unknown error"}`
+      `Telegram 测试消息发送失败：${resp.description ?? "未知错误"}`
     );
   }
 
-  logger.success("Telegram test message sent successfully.");
+  logger.success("Telegram 测试消息发送成功。");
 }
 
 export async function verifyTelegramWeakSignals(
@@ -326,7 +339,7 @@ export async function verifyTelegramWeakSignals(
   const timeoutMs = options?.timeoutMs ?? 180000;
   const pollIntervalMs = options?.pollIntervalMs ?? 2500;
 
-  logger.info("Weak validation: send `你是谁` and `/model` to the bot in Telegram now.");
+  logger.info("弱校验：请现在到 Telegram 给机器人发送 `你是谁` 和 `/model`。");
 
   let offset: number | undefined;
   const baseline = await callTelegram<TelegramUpdate[]>(token, "getUpdates", {
@@ -336,14 +349,14 @@ export async function verifyTelegramWeakSignals(
   if (!baseline.ok) {
     if (isTelegramGetUpdatesConflict(baseline.description)) {
       logger.warn(
-        "Telegram weak validation skipped: getUpdates conflict detected (another bot consumer is active, usually OpenClaw gateway)."
+        "Telegram 弱校验已跳过：检测到 getUpdates 冲突（通常是 OpenClaw gateway 正在消费消息）。"
       );
       return;
     }
 
     throw new AppError(
       ErrorCodes.TELEGRAM_API_INVALID,
-      `Telegram getUpdates failed: ${baseline.description ?? "unknown"}`
+      `Telegram getUpdates 调用失败：${baseline.description ?? "未知错误"}`
     );
   }
 
@@ -365,14 +378,14 @@ export async function verifyTelegramWeakSignals(
     if (!updatesResp.ok) {
       if (isTelegramGetUpdatesConflict(updatesResp.description)) {
         logger.warn(
-          "Telegram weak validation skipped: getUpdates conflict detected during polling (another bot consumer is active)."
+          "Telegram 弱校验已跳过：轮询阶段检测到 getUpdates 冲突（存在其他消息消费者）。"
         );
         return;
       }
 
       throw new AppError(
         ErrorCodes.TELEGRAM_API_INVALID,
-        `Telegram getUpdates failed: ${updatesResp.description ?? "unknown"}`
+        `Telegram getUpdates 调用失败：${updatesResp.description ?? "未知错误"}`
       );
     }
 
@@ -386,7 +399,7 @@ export async function verifyTelegramWeakSignals(
       seenModel = seenModel || signals.requestedModel;
 
       if (seenWhoAmI && seenModel) {
-        logger.success("Telegram weak validation passed (received `你是谁` and `/model`).");
+        logger.success("Telegram 弱校验通过（已收到 `你是谁` 和 `/model`）。");
         return;
       }
     }
@@ -404,6 +417,6 @@ export async function verifyTelegramWeakSignals(
 
   throw new AppError(
     ErrorCodes.TELEGRAM_WEAK_VALIDATION_FAILED,
-    `Telegram weak validation timeout. Missing inbound message(s): ${missing.join(", ")}`
+    `Telegram 弱校验超时，缺少入站消息：${missing.join(", ")}`
   );
 }

@@ -34,21 +34,54 @@ FAST_OPENCLAW_API_BASE="http://localhost:8787" npx @your-scope/fast-openclaw
 
 The CLI asks for one-time key first. Key must validate before install/config starts.
 
+## DingTalk 快速路径（按你的 5 步）
+
+项目里提供了一个脚本，把以下流程一次性执行：
+1. 检查/安装 Node.js
+2. 安装 `openclaw@latest`
+3. 安装 `openclaw-dingtalk` 插件
+4. 写入 `~/.openclaw/openclaw.json`
+5. 重启 gateway
+
+执行方式：
+
+```bash
+LITELLM_API_KEY='sk-xxx' \
+DING_CLIENT_ID='dingxxx' \
+DING_CLIENT_SECRET='xxx' \
+DING_ROBOT_CODE='dingxxx' \
+DING_CORP_ID='dingxxx' \
+DING_AGENT_ID='123456789' \
+bash scripts/setup-dingtalk.sh
+```
+
+可选环境变量：
+- `OPENCLAW_GATEWAY_TOKEN`（不传则自动生成）
+- `LITELLM_BASE_URL`（默认 `http://43.134.133.185:4000/`）
+- `LITELLM_API`（默认 `anthropic-messages`）
+- `LITELLM_MODEL_ID`（默认 `claude-sonnet-4-6`）
+- `LITELLM_MODEL_NAME`（默认 `claude-sonnet-4-6`）
+
+脚本会自动修正插件白名单为 `openclaw-dingtalk`（不是 `dingtalk`）。
+
 ## CLI Features
 
 - One-time license gating before setup actions.
 - Resume flow with `--resume <token>` within backend time window.
 - OpenClaw install + version check + PATH auto-recovery (`zsh` and `bash`).
-- Strict non-interactive onboarding (`--accept-risk`, `--mode local`, `skip model/skills/channels/ui/health`) with daemon install and no interactive fallback.
+- Pure JSON-based setup (no `openclaw onboard` interaction).
 - Model preset selection from five options (OpenAI/Claude/Gemini/GLM/Kimi).
 - Merge write to `~/.openclaw/openclaw.json`.
+- Gateway baseline config auto-write: `mode=local`, `bind=loopback`, `port=18789`, `auth.mode=token`.
 - Model connectivity test immediately after model config write.
 - Browser isolated profile config when Chrome exists.
-- Gateway start and connectivity verification without prompt (server defaults/env/local config token).
-- Telegram bind after gateway: token validate -> auto discover chat id -> send test message.
+- Gateway start and token-auth connectivity verification without `openclaw agent` conversation.
+- Channel bind after gateway: choose Telegram or 钉钉。
+- Telegram bind: token validate -> manual chat id -> send test message.
+- 钉钉 bind: plugin ensure + 5 fields write + config-level validation.
 - Telegram weak validation: user sends `你是谁` and `/model`, CLI verifies inbound events are received.
-- Channel scope in v1: Telegram only.
-- Standalone stage diagnostics with `--test-only` (`model|gateway|telegram|all`).
+- Channel scope in v1: Telegram + 钉钉。
+- Standalone stage diagnostics with `--test-only` (`model|gateway|telegram|dingtalk|all`).
 - Interactive doctor mode with `--doctor` to click/select checks and get troubleshooting hints.
 - Session complete callback burns the one-time key.
 
@@ -83,15 +116,23 @@ fast-openclaw --api-base <url> --resume <token> --debug
 Additional option:
 
 - `--skip-openclaw-reset`: skip `openclaw reset --scope full` (default behavior is full reset to avoid reusing any historical config/channel state).
+- `--channel <telegram|dingtalk>`: 指定渠道类型并跳过渠道选择交互。
 - `--telegram-bot-token <token>`: provide Telegram bot token non-interactively.
-- `--telegram-chat-id <id>`: force chat id, skip auto discovery.
+- `--telegram-chat-id <id>`: Telegram chat id（当前为必填，支持交互输入）。
+- `--dingtalk-client-id <id>`: 钉钉 clientId。
+- `--dingtalk-client-secret <secret>`: 钉钉 clientSecret。
+- `--dingtalk-robot-code <code>`: 钉钉 robotCode。
+- `--dingtalk-corp-id <id>`: 钉钉 corpId。
+- `--dingtalk-agent-id <id>`: 钉钉 agentId。
 - `--skip-telegram-bind`: debug only, skip Telegram bind step.
-- `--test-only <model|gateway|telegram|all>`: run isolated diagnostics without license/backend flow.
-- `--doctor`: interactive diagnostics menu; users can select model/gateway/telegram/full checks and see likely fixes.
+- `--test-only <model|gateway|telegram|dingtalk|all>`: run isolated diagnostics without license/backend flow.
+- `--doctor`: interactive diagnostics menu; users can select model/gateway/channel checks and see likely fixes.
 
-Onboarding behavior in v1:
-- CLI does not fall back to interactive onboarding.
-- If non-interactive onboard fails, setup exits with `ONBOARD_FAILED` and includes command output summary.
+Setup behavior in v1:
+- CLI does not run `openclaw onboard`.
+- CLI writes required baseline config directly into `~/.openclaw/openclaw.json`.
+- If old `setup-state.json` contains legacy phase `onboarded`, CLI exits and requires deleting `~/.openclaw/setup-state.json` before retry.
+- If old `setup-state.json` phase is `telegram_bound`, CLI auto-migrates it to `channel_bound` (`channelType=telegram`).
 
 Doctor mode usage:
 
@@ -103,16 +144,20 @@ FAST_OPENCLAW_API_BASE="http://localhost:8787" npx @your-scope/fast-openclaw --d
 
 Full setup flow is now:
 
-1. `configured`: write model/browser config.
-2. `model_verified`: model API connectivity test.
-3. `gateway_verified`: gateway connectivity + `openclaw agent` strict gateway check.
-4. `telegram_bound`: Telegram bind + test message send.
-5. `completed`: backend `complete` burns one-time key.
+1. `license_validated`
+2. `installed`
+3. `configured`: write model/browser config + gateway baseline config.
+4. `model_verified`: model API connectivity test.
+5. `gateway_verified`: gateway token-auth connectivity check.
+6. `channel_bound`: channel bind (Telegram 或钉钉) + test/validation.
+7. `completed`: backend `complete` burns one-time key.
 
 End-user required inputs in default mode:
 1. one-time license key
 2. model choice + model API key (for example GLM key)
-3. Telegram bot token (chat id can auto-discover)
+3. channel choice
+4. if Telegram: bot token + chat id
+5. if 钉钉: clientId/clientSecret/robotCode/corpId/agentId
 
 ## Environment Variables
 

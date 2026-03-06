@@ -44,7 +44,7 @@ export async function writeOpenClawConfig(config: OpenClawConfig): Promise<void>
     await fs.mkdir(path.dirname(OPENCLAW_CONFIG_PATH), { recursive: true });
     await fs.writeFile(OPENCLAW_CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, "utf8");
   } catch (error) {
-    throw new AppError(ErrorCodes.CONFIG_WRITE_FAILED, "Failed to write openclaw.json", error);
+    throw new AppError(ErrorCodes.CONFIG_WRITE_FAILED, "写入 openclaw.json 失败", error);
   }
 }
 
@@ -57,7 +57,7 @@ export async function mergeAndWriteConfig(patch: Partial<OpenClawConfig>): Promi
 
   const merged = deepMerge(current, patch);
   if (!isObject(merged)) {
-    throw new AppError(ErrorCodes.CONFIG_WRITE_FAILED, "Merged config is not an object.");
+    throw new AppError(ErrorCodes.CONFIG_WRITE_FAILED, "合并后的配置不是对象。");
   }
 
   await writeOpenClawConfig(merged as OpenClawConfig);
@@ -70,7 +70,7 @@ export async function syncDefaultAgentModel(providerName: string, modelId: strin
   if (!provider || !bareModelId) {
     throw new AppError(
       ErrorCodes.CONFIG_VALIDATION_FAILED,
-      "Cannot sync default agent model: provider/model id is empty."
+      "无法同步默认 agent 模型：provider 或 model id 为空。"
     );
   }
   const selectedModelId = `${provider}/${bareModelId}`;

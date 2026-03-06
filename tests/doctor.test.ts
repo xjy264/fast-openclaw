@@ -8,14 +8,14 @@ describe("buildDoctorHints", () => {
       new AppError(ErrorCodes.TELEGRAM_DISCOVERY_TIMEOUT, "timed out")
     );
 
-    expect(bundle.summary).toContain("discovery timed out");
-    expect(bundle.hints.some((item) => item.includes("/start"))).toBe(true);
+    expect(bundle.summary).toContain("轮询超时");
+    expect(bundle.hints.some((item) => item.includes("--telegram-chat-id"))).toBe(true);
   });
 
   it("returns gateway token hints", () => {
     const bundle = buildDoctorHints(new AppError(ErrorCodes.GATEWAY_FAILED, "no token"));
 
-    expect(bundle.summary).toContain("Gateway check failed");
+    expect(bundle.summary).toContain("Gateway 检查失败");
     expect(
       bundle.hints.some(
         (item) =>
@@ -27,7 +27,16 @@ describe("buildDoctorHints", () => {
   it("falls back to generic hints on unknown errors", () => {
     const bundle = buildDoctorHints(new Error("unknown"));
 
-    expect(bundle.summary).toContain("Unexpected diagnostic failure");
+    expect(bundle.summary).toContain("未预期");
     expect(bundle.hints).toHaveLength(3);
+  });
+
+  it("returns dingtalk plugin hints", () => {
+    const bundle = buildDoctorHints(
+      new AppError(ErrorCodes.CHANNEL_PLUGIN_INSTALL_FAILED, "plugin install failed")
+    );
+
+    expect(bundle.summary).toContain("插件安装失败");
+    expect(bundle.hints.some((item) => item.includes("openclaw plugins install openclaw-dingtalk"))).toBe(true);
   });
 });

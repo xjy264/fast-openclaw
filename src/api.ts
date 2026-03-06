@@ -44,7 +44,7 @@ export class ApiClient {
 
       if (!response.ok) {
         const body = await response.text();
-        throw new AppError(errorCode, `HTTP ${response.status}: ${body || response.statusText}`);
+        throw new AppError(errorCode, `HTTP ${response.status}：${body || response.statusText}`);
       }
 
       return (await response.json()) as T;
@@ -55,7 +55,7 @@ export class ApiClient {
       if (error instanceof AppError) {
         throw error;
       }
-      throw new AppError(errorCode, `Request failed for ${path}`, error);
+      throw new AppError(errorCode, `请求失败：${path}`, error);
     }
   }
 }

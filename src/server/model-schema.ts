@@ -137,56 +137,56 @@ export function buildDefaultModelSchema(): ModelSchema {
     buildOption(
       providerPreset("openai", {
         label: "OpenAI",
-        description: "OpenAI official API",
+        description: "OpenAI 官方 API",
         api: "openai-completions",
         baseUrl: "https://api.openai.com/v1",
         modelId: "gpt-4.1-mini",
         modelName: "gpt-4.1-mini",
-        apiKeyLabel: "OpenAI API Key"
+        apiKeyLabel: "OpenAI API Key（必填）"
       })
     ),
     buildOption(
       providerPreset("claude", {
         label: "Claude",
-        description: "Anthropic official API",
+        description: "Anthropic 官方 API",
         api: "anthropic-messages",
         baseUrl: "https://api.anthropic.com",
         modelId: "claude-3-7-sonnet-latest",
         modelName: "claude-3-7-sonnet-latest",
-        apiKeyLabel: "Anthropic API Key"
+        apiKeyLabel: "Anthropic API Key（必填）"
       })
     ),
     buildOption(
       providerPreset("gemini", {
         label: "Gemini",
-        description: "Google Gemini OpenAI-compatible endpoint",
+        description: "Google Gemini（OpenAI 兼容接口）",
         api: "openai-completions",
         baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
         modelId: "gemini-2.0-flash",
         modelName: "gemini-2.0-flash",
-        apiKeyLabel: "Gemini API Key"
+        apiKeyLabel: "Gemini API Key（必填）"
       })
     ),
     buildGlmOption(
       providerPreset("glm", {
         label: "GLM",
-        description: "Zhipu GLM OpenAI-compatible endpoint",
+        description: "智谱 GLM（OpenAI 兼容接口）",
         api: "openai-completions",
         baseUrl: "https://open.bigmodel.cn/api/paas/v4",
         modelId: "glm-4.7",
         modelName: "GLM 4.7",
-        apiKeyLabel: "GLM API Key"
+        apiKeyLabel: "GLM API Key（必填）"
       })
     ),
     buildOption(
       providerPreset("kimi", {
         label: "Kimi",
-        description: "Moonshot Kimi OpenAI-compatible endpoint",
+        description: "Moonshot Kimi（OpenAI 兼容接口）",
         api: "openai-completions",
         baseUrl: "https://api.moonshot.cn/v1",
         modelId: "moonshot-v1-8k",
         modelName: "moonshot-v1-8k",
-        apiKeyLabel: "Kimi API Key"
+        apiKeyLabel: "Kimi API Key（必填）"
       })
     )
   ]);

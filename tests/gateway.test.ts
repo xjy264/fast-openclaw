@@ -60,6 +60,6 @@ describe("summarizeAgentOutput", () => {
   });
 
   it("returns fallback text for empty output", () => {
-    expect(summarizeAgentOutput("   \n \n")).toBe("no command output");
+    expect(summarizeAgentOutput("   \n \n")).toBe("无命令输出");
   });
 });
