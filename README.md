@@ -39,11 +39,17 @@ The CLI asks for one-time key first. Key must validate before install/config sta
 - One-time license gating before setup actions.
 - Resume flow with `--resume <token>` within backend time window.
 - OpenClaw install + version check + PATH auto-recovery (`zsh` and `bash`).
-- Guided semi-automatic `openclaw onboard --install-daemon`.
-- Schema-driven model config prompts from backend response.
+- Non-interactive onboarding (`skip model/skills/channels/ui`) with daemon install.
+- Model preset selection from five options (OpenAI/Claude/Gemini/GLM/Kimi).
 - Merge write to `~/.openclaw/openclaw.json`.
+- Model connectivity test immediately after model config write.
 - Browser isolated profile config when Chrome exists.
-- Gateway start and connectivity verification with Bearer token.
+- Gateway start and connectivity verification without prompt (server defaults/env/local config token).
+- Telegram bind after gateway: token validate -> auto discover chat id -> send test message.
+- Telegram weak validation: user sends `你是谁` and `/model`, CLI verifies inbound events are received.
+- Channel scope in v1: Telegram only.
+- Standalone stage diagnostics with `--test-only` (`model|gateway|telegram|all`).
+- Interactive doctor mode with `--doctor` to click/select checks and get troubleshooting hints.
 - Session complete callback burns the one-time key.
 
 ## Server Features
@@ -74,6 +80,36 @@ npm run start:server
 fast-openclaw --api-base <url> --resume <token> --debug
 ```
 
+Additional option:
+
+- `--skip-openclaw-reset`: skip `openclaw reset --scope full` (default behavior is full reset to avoid reusing any historical config/channel state).
+- `--telegram-bot-token <token>`: provide Telegram bot token non-interactively.
+- `--telegram-chat-id <id>`: force chat id, skip auto discovery.
+- `--skip-telegram-bind`: debug only, skip Telegram bind step.
+- `--test-only <model|gateway|telegram|all>`: run isolated diagnostics without license/backend flow.
+- `--doctor`: interactive diagnostics menu; users can select model/gateway/telegram/full checks and see likely fixes.
+
+Doctor mode usage:
+
+```bash
+FAST_OPENCLAW_API_BASE="http://localhost:8787" npx @your-scope/fast-openclaw --doctor
+```
+
+## Setup Stage Order
+
+Full setup flow is now:
+
+1. `configured`: write model/browser config.
+2. `model_verified`: model API connectivity test.
+3. `gateway_verified`: gateway connectivity + `openclaw agent` strict gateway check.
+4. `telegram_bound`: Telegram bind + test message send.
+5. `completed`: backend `complete` burns one-time key.
+
+End-user required inputs in default mode:
+1. one-time license key
+2. model choice + model API key (for example GLM key)
+3. Telegram bot token (chat id can auto-discover)
+
 ## Environment Variables
 
 ### CLI
@@ -88,6 +124,12 @@ fast-openclaw --api-base <url> --resume <token> --debug
 - `FAST_OPENCLAW_RESUME_HOURS` (default `24`)
 - `FAST_OPENCLAW_GATEWAY_URL` (optional, default gateway URL for CLI)
 - `FAST_OPENCLAW_GATEWAY_TOKEN` (optional, default gateway token for CLI)
+- `FAST_OPENCLAW_MODEL_PROVIDER` (optional, reorder default option in selector)
+- `FAST_OPENCLAW_MODEL_API_KEY` (optional global fallback for model api key prompt)
+- `FAST_OPENCLAW_MODEL_<PROVIDER>_API_KEY` (optional per-provider key default, e.g. `FAST_OPENCLAW_MODEL_GLM_API_KEY`)
+- `FAST_OPENCLAW_MODEL_<PROVIDER>_BASE_URL` (optional per-provider baseUrl override)
+- `FAST_OPENCLAW_MODEL_<PROVIDER>_MODEL_ID` (optional per-provider model id override)
+- `FAST_OPENCLAW_MODEL_<PROVIDER>_MODEL_NAME` (optional per-provider model name override)
 - `FAST_OPENCLAW_DATA_FILE` (default `./.data/store.json`)
 
 ## API Endpoints

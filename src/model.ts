@@ -29,6 +29,57 @@ function interpolateValue(value: unknown, values: Record<string, unknown>): unkn
   return value;
 }
 
+function envKeyForField(fieldKey: string): string {
+  const snake = fieldKey
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[^a-zA-Z0-9]/g, "_")
+    .toUpperCase();
+  return `FAST_OPENCLAW_MODEL_${snake}`;
+}
+
+function coerceTextValue(field: SchemaField, value: string): string | number | boolean {
+  if (field.type === "number") {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      throw new AppError(
+        ErrorCodes.CONFIG_VALIDATION_FAILED,
+        `Environment value for ${envKeyForField(field.key)} must be a number.`
+      );
+    }
+    return parsed;
+  }
+
+  if (field.type === "boolean") {
+    const normalized = value.trim().toLowerCase();
+    if (["1", "true", "yes", "y", "on"].includes(normalized)) {
+      return true;
+    }
+    if (["0", "false", "no", "n", "off"].includes(normalized)) {
+      return false;
+    }
+    throw new AppError(
+      ErrorCodes.CONFIG_VALIDATION_FAILED,
+      `Environment value for ${envKeyForField(field.key)} must be boolean.`
+    );
+  }
+
+  return value;
+}
+
+function resolvePrefilledFieldValue(field: SchemaField): unknown {
+  const envKey = envKeyForField(field.key);
+  const envValue = process.env[envKey];
+  if (typeof envValue === "string" && envValue.trim()) {
+    return coerceTextValue(field, envValue.trim());
+  }
+
+  if (field.default !== undefined) {
+    return field.default;
+  }
+
+  return undefined;
+}
+
 async function askField(field: SchemaField): Promise<unknown> {
   const message = field.required ? `${field.label} (required)` : field.label;
 
@@ -149,17 +200,31 @@ function assertSchema(schema: ModelSchema): void {
 export async function collectModelConfig(schema: ModelSchema): Promise<InteractiveModelResult> {
   assertSchema(schema);
 
-  const selected = await select<ModelOption>({
-    message: "Select model preset",
-    choices: schema.options.map((option) => ({
-      name: option.description ? `${option.name} - ${option.description}` : option.name,
-      value: option
-    }))
-  });
+  const selected: ModelOption =
+    schema.options.length === 1
+      ? schema.options[0]
+      : await select<ModelOption>({
+          message: "Select model preset",
+          choices: schema.options.map((option) => ({
+            name: option.description ? `${option.name} - ${option.description}` : option.name,
+            value: option
+          }))
+        });
 
   const values: Record<string, unknown> = {};
   for (const field of selected.fields) {
-    values[field.key] = await askField(field);
+    const prefilled = resolvePrefilledFieldValue(field);
+    if (prefilled !== undefined) {
+      values[field.key] = prefilled;
+      continue;
+    }
+
+    if (field.required) {
+      values[field.key] = await askField(field);
+      continue;
+    }
+
+    values[field.key] = undefined;
   }
 
   const modelsConfig = interpolateValue(selected.configTemplate, values);

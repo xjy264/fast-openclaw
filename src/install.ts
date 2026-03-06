@@ -92,3 +92,16 @@ export async function fixPathAndRetryVersion(logger: Logger): Promise<string> {
 
   return version;
 }
+
+export async function resetOpenClawState(logger: Logger): Promise<void> {
+  logger.warn("Resetting existing OpenClaw config/state for a clean reinstall...");
+  const result = await runCommand(
+    "openclaw",
+    ["reset", "--scope", "full", "--non-interactive", "--yes"],
+    { inheritStdio: true }
+  );
+
+  if (result.code !== 0) {
+    throw new AppError(ErrorCodes.INSTALL_FAILED, "Failed to reset OpenClaw state.");
+  }
+}

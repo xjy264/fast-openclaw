@@ -63,3 +63,42 @@ export async function mergeAndWriteConfig(patch: Partial<OpenClawConfig>): Promi
   await writeOpenClawConfig(merged as OpenClawConfig);
   return merged as OpenClawConfig;
 }
+
+export async function syncDefaultAgentModel(providerName: string, modelId: string): Promise<OpenClawConfig> {
+  const provider = providerName.trim();
+  const bareModelId = modelId.trim();
+  if (!provider || !bareModelId) {
+    throw new AppError(
+      ErrorCodes.CONFIG_VALIDATION_FAILED,
+      "Cannot sync default agent model: provider/model id is empty."
+    );
+  }
+  const selectedModelId = `${provider}/${bareModelId}`;
+
+  const current = await readOpenClawConfig();
+
+  const currentAgents = isObject(current.agents) ? current.agents : {};
+  const currentDefaults = isObject(currentAgents.defaults) ? currentAgents.defaults : {};
+
+  const next: OpenClawConfig = {
+    ...current,
+    agents: {
+      ...currentAgents,
+      defaults: {
+        ...currentDefaults,
+        model: {
+          ...(isObject((currentDefaults as Record<string, unknown>).model)
+            ? ((currentDefaults as Record<string, unknown>).model as Record<string, unknown>)
+            : {}),
+          primary: selectedModelId
+        },
+        models: {
+          [selectedModelId]: {}
+        }
+      }
+    }
+  };
+
+  await writeOpenClawConfig(next);
+  return next;
+}

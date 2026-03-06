@@ -4,13 +4,21 @@ export type SetupPhase =
   | "installed"
   | "onboarded"
   | "configured"
+  | "model_verified"
   | "gateway_verified"
+  | "telegram_bound"
   | "completed";
 
 export interface CliOptions {
   apiBase?: string;
   resume?: string;
   debug?: boolean;
+  doctor?: boolean;
+  skipOpenclawReset?: boolean;
+  telegramBotToken?: string;
+  telegramChatId?: string;
+  skipTelegramBind?: boolean;
+  testOnly?: "model" | "gateway" | "telegram" | "all";
 }
 
 export interface TelemetryEvent {
@@ -102,6 +110,7 @@ export interface SessionCompleteRequest {
     gatewayUrl: string;
     browserEnabled: boolean;
     modelId: string;
+    telegramChatId?: string;
   };
 }
 
@@ -113,6 +122,8 @@ export interface SetupState {
   openclawVersion?: string;
   gatewayUrl?: string;
   browserEnabled?: boolean;
+  telegramChatId?: string;
+  telegramBoundAt?: string;
   deviceFingerprintHash: string;
   updatedAt: string;
 }

@@ -3,17 +3,41 @@ import { runCommand } from "./exec.js";
 import { Logger } from "./logger.js";
 
 export async function runOnboardGuide(logger: Logger): Promise<void> {
-  logger.info("Starting OpenClaw onboard wizard...");
+  logger.info("Starting OpenClaw onboard (non-interactive quickstart) ...");
+
+  const nonInteractive = await runCommand(
+    "openclaw",
+    [
+      "onboard",
+      "--install-daemon",
+      "--non-interactive",
+      "--accept-risk",
+      "--flow",
+      "quickstart",
+      "--auth-choice",
+      "skip",
+      "--skip-skills",
+      "--skip-channels",
+      "--skip-ui"
+    ],
+    { inheritStdio: true }
+  );
+
+  if (nonInteractive.code === 0) {
+    return;
+  }
+
+  logger.warn("Non-interactive onboard failed. Falling back to interactive wizard.");
   logger.info("Follow these selections in the wizard:");
   logger.info("1) Model config: choose skip for now (or any temp option)");
   logger.info("2) Skills: choose skip for now");
   logger.info("3) Hooks: press space to keep all unchecked, then confirm");
 
-  const result = await runCommand("openclaw", ["onboard", "--install-daemon"], {
+  const interactive = await runCommand("openclaw", ["onboard", "--install-daemon"], {
     inheritStdio: true
   });
 
-  if (result.code !== 0) {
+  if (interactive.code !== 0) {
     throw new AppError(ErrorCodes.ONBOARD_FAILED, "openclaw onboard failed.");
   }
 }

@@ -1,8 +1,31 @@
-import { input, password } from "@inquirer/prompts";
 import { DEFAULT_GATEWAY_URL } from "./constants.js";
+import { readOpenClawConfig } from "./config.js";
 import { AppError, ErrorCodes } from "./errors.js";
 import { runCommand } from "./exec.js";
 import { Logger } from "./logger.js";
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function readTokenFromConfig(config: Record<string, unknown>): string {
+  const gateway = config.gateway;
+  if (typeof gateway !== "object" || gateway === null || Array.isArray(gateway)) {
+    return "";
+  }
+
+  const token = asString((gateway as Record<string, unknown>).token);
+  if (token) {
+    return token;
+  }
+
+  const auth = (gateway as Record<string, unknown>).auth;
+  if (typeof auth !== "object" || auth === null || Array.isArray(auth)) {
+    return "";
+  }
+
+  return asString((auth as Record<string, unknown>).token);
+}
 
 async function runGatewayCommand(action: "start" | "stop" | "restart"): Promise<void> {
   const result = await runCommand("openclaw", ["gateway", action], {
@@ -35,38 +58,65 @@ export async function verifyGatewayConnectivity(
   tokenFromServer?: string
 ): Promise<string> {
   const url =
-    gatewayUrl && gatewayUrl.trim()
-      ? gatewayUrl.trim()
-      : await input({ message: "Gateway URL", default: DEFAULT_GATEWAY_URL });
+    gatewayUrl?.trim() ||
+    process.env.FAST_OPENCLAW_GATEWAY_URL?.trim() ||
+    DEFAULT_GATEWAY_URL;
 
-  let token = tokenFromServer?.trim() ?? "";
+  let token =
+    tokenFromServer?.trim() ||
+    process.env.OPENCLAW_GATEWAY_TOKEN?.trim() ||
+    process.env.FAST_OPENCLAW_GATEWAY_TOKEN?.trim() ||
+    "";
+
   if (!token) {
-    token = await password({
-      message: "Gateway token for Authorization: Bearer <token>",
-      mask: "*",
-      validate: (value) => (value.trim() ? true : "Gateway token is required")
-    });
+    const config = await readOpenClawConfig();
+    token = readTokenFromConfig(config as Record<string, unknown>);
+  }
+
+  if (!token) {
+    throw new AppError(
+      ErrorCodes.GATEWAY_FAILED,
+      "Gateway token not found. Set FAST_OPENCLAW_GATEWAY_TOKEN or configure OpenClaw gateway auth token."
+    );
   }
 
   logger.info(`Testing gateway connectivity at ${url} ...`);
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  const maxAttempts = 8;
+  const retryDelayMs = 1500;
+  let lastError = "";
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new AppError(
-      ErrorCodes.GATEWAY_FAILED,
-      `Gateway connectivity test failed: ${response.status} ${body || response.statusText}`
-    );
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        logger.success("Gateway connectivity verified.");
+        return url;
+      }
+
+      const body = await response.text();
+      lastError = `${response.status} ${body || response.statusText}`;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      lastError = message;
+    }
+
+    if (attempt < maxAttempts) {
+      logger.warn(`Gateway not ready yet (attempt ${attempt}/${maxAttempts}). Retrying...`);
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
   }
 
-  logger.success("Gateway connectivity verified.");
-  return url;
+  throw new AppError(
+    ErrorCodes.GATEWAY_FAILED,
+    `Gateway connectivity test failed after ${maxAttempts} attempts: ${lastError}`
+  );
 }
 
 interface AgentPayload {
