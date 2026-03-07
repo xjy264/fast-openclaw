@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AppError, ErrorCodes } from "../src/errors.js";
-import { validateDingtalkConfigInput } from "../src/dingtalk.js";
+import { isPluginAlreadyExistsOutput, validateDingtalkConfigInput } from "../src/dingtalk.js";
 
 describe("validateDingtalkConfigInput", () => {
   it("accepts and trims all required fields", () => {
@@ -35,5 +35,16 @@ describe("validateDingtalkConfigInput", () => {
       expect(error).toBeInstanceOf(AppError);
       expect((error as AppError).code).toBe(ErrorCodes.CHANNEL_BIND_FAILED);
     }
+  });
+});
+
+describe("isPluginAlreadyExistsOutput", () => {
+  it("detects plugin already exists text", () => {
+    expect(isPluginAlreadyExistsOutput("plugin already exists: openclaw-dingtalk")).toBe(true);
+    expect(isPluginAlreadyExistsOutput("already exists openclaw-dingtalk")).toBe(true);
+  });
+
+  it("returns false for unrelated output", () => {
+    expect(isPluginAlreadyExistsOutput("network timeout")).toBe(false);
   });
 });

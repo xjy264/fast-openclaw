@@ -30,7 +30,8 @@ export function buildDoctorHints(error: unknown): DoctorHintBundle {
     return {
       summary: "Gateway 检查失败。",
       hints: [
-        "先执行 `openclaw gateway start`，等待 3-5 秒后再重试。",
+        "执行修复链路：`openclaw gateway install && openclaw gateway restart && openclaw gateway status`。",
+        "若提示 token 不匹配，请检查 `~/.openclaw/openclaw.json` 中 `gateway.auth.token` 是否为占位值并重新生成。",
         "设置 `OPENCLAW_GATEWAY_TOKEN` 或 `FAST_OPENCLAW_GATEWAY_TOKEN`，或在 openclaw.json 中配置 `gateway.auth.token`。",
         "仅重试 gateway 检查：`fast-openclaw --test-only gateway --debug`。"
       ]

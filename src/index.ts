@@ -14,7 +14,12 @@ import {
 import { buildDoctorHints } from "./doctor.js";
 import { AppError, ErrorCodes } from "./errors.js";
 import { buildDeviceFingerprint } from "./fingerprint.js";
-import { restartGateway, startGateway, verifyGatewayConnectivity } from "./gateway.js";
+import {
+  ensureGatewayServiceReady,
+  normalizeGatewayTokenValue,
+  restartGateway,
+  verifyGatewayConnectivity
+} from "./gateway.js";
 import {
   fixPathAndRetryVersion,
   installOpenClaw,
@@ -23,7 +28,7 @@ import {
 } from "./install.js";
 import { Logger } from "./logger.js";
 import { resolvePrimaryModelTarget, testModelConnectivity } from "./model-test.js";
-import { collectModelConfig } from "./model.js";
+import { collectModelConfig, validateModelsConfig } from "./model.js";
 import { advancePhase, clearSetupState, readSetupState, saveSetupState } from "./state.js";
 import {
   configureOpenClawTelegram,
@@ -93,15 +98,19 @@ async function ensureGatewayBaselineConfig(
 ): Promise<string> {
   const current = await readOpenClawConfig();
   const existingToken = readGatewayTokenFromConfig(current);
-  const gatewayToken =
+  const preferredToken =
     tokenFromServer?.trim() ||
     process.env.OPENCLAW_GATEWAY_TOKEN?.trim() ||
     process.env.FAST_OPENCLAW_GATEWAY_TOKEN?.trim() ||
     existingToken ||
     buildGatewayToken();
+  const normalizedToken = normalizeGatewayTokenValue(preferredToken, buildGatewayToken);
+  const gatewayToken = normalizedToken.token;
 
   if (!existingToken && !tokenFromServer && !process.env.OPENCLAW_GATEWAY_TOKEN && !process.env.FAST_OPENCLAW_GATEWAY_TOKEN) {
     logger.warn("未检测到现有网关 token，已自动生成并写入本地配置。");
+  } else if (normalizedToken.replaced) {
+    logger.warn("检测到占位网关 token，已自动替换为新 token。");
   }
 
   await mergeAndWriteConfig({
@@ -263,7 +272,7 @@ async function runGatewaySectionTest(
   logger: Logger,
   gatewayDefaults?: { url?: string; token?: string }
 ): Promise<string> {
-  await startGateway(logger);
+  await ensureGatewayServiceReady(logger);
   const gatewayUrl = await verifyGatewayConnectivity(logger, gatewayDefaults?.url, gatewayDefaults?.token);
   return gatewayUrl;
 }
@@ -297,6 +306,29 @@ async function runDingtalkSectionTest(
   const dingtalkInput = await collectDingtalkConfigInput(options);
   await configureOpenClawDingtalk(dingtalkInput, logger);
   await verifyDingtalkConfigured(logger);
+}
+
+async function ensureModelGuardAfterChannel(logger: Logger, selectedModelId?: string): Promise<void> {
+  if (!selectedModelId?.trim()) {
+    return;
+  }
+
+  const modelTarget = selectedModelId.trim();
+  const separator = modelTarget.indexOf("/");
+  if (separator <= 0 || separator >= modelTarget.length - 1) {
+    logger.warn(`跳过模型防护同步：无效 modelId=${modelTarget}`);
+    return;
+  }
+
+  const providerName = modelTarget.slice(0, separator);
+  const modelId = modelTarget.slice(separator + 1);
+
+  const config = await readOpenClawConfig();
+  if (config.models) {
+    validateModelsConfig(config.models);
+  }
+  await syncDefaultAgentModel(providerName, modelId);
+  logger.info(`渠道配置后已重新同步默认模型：${providerName}/${modelId}`);
 }
 
 async function runStandaloneTests(logger: Logger, options: CliOptions): Promise<void> {
@@ -641,6 +673,7 @@ async function run(): Promise<void> {
 
         if (selectedChannel === "telegram") {
           const chatId = await runTelegramSectionTest(logger, options);
+          await ensureModelGuardAfterChannel(logger, state.modelId);
           state = await advancePhase(state, "channel_bound", {
             channelType: "telegram",
             telegramChatId: chatId,
@@ -651,6 +684,7 @@ async function run(): Promise<void> {
           logger.success(`Telegram 渠道校验通过（会话 ${chatId}）。`);
         } else {
           await runDingtalkSectionTest(logger, options);
+          await ensureModelGuardAfterChannel(logger, state.modelId);
           state = await advancePhase(state, "channel_bound", {
             channelType: "dingtalk",
             telegramChatId: undefined,

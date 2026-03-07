@@ -30,6 +30,24 @@ function assertRequired(value: string, fieldLabel: string): string {
   return value.trim();
 }
 
+function summarizeOutput(output: string, maxLines = 6): string {
+  const lines = output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, maxLines)
+    .map((line) => (line.length > 220 ? `${line.slice(0, 220)}...` : line));
+  return lines.length > 0 ? lines.join(" | ") : "无命令输出";
+}
+
+export function isPluginAlreadyExistsOutput(output: string): boolean {
+  const text = output.toLowerCase();
+  return (
+    text.includes("plugin already exists") ||
+    (text.includes("already exists") && text.includes(DINGTALK_PLUGIN_ID))
+  );
+}
+
 async function askText(message: string, prefilled?: string): Promise<string> {
   if (prefilled?.trim()) {
     return prefilled.trim();
@@ -100,7 +118,13 @@ export async function ensureDingtalkPluginInstalled(logger: Logger): Promise<voi
   logger.info(`未检测到钉钉插件，正在安装：${DINGTALK_PLUGIN_ID}`);
   const result = await runCommand("openclaw", ["plugins", "install", DINGTALK_PLUGIN_ID]);
 
+  const installCombined = [result.stderr, result.stdout].filter(Boolean).join("\n");
   if (result.code !== 0 && !(await pathExists(DINGTALK_PLUGIN_DIR))) {
+    if (isPluginAlreadyExistsOutput(installCombined)) {
+      logger.warn("插件安装返回 already exists，按已安装处理。");
+      return;
+    }
+
     const details = [result.stderr, result.stdout].filter(Boolean).join(" | ").slice(0, 240);
     throw new AppError(
       ErrorCodes.CHANNEL_PLUGIN_INSTALL_FAILED,
@@ -145,6 +169,15 @@ export async function configureOpenClawDingtalk(
       }
     }
   });
+
+  const validateResult = await runCommand("openclaw", ["config", "validate"]);
+  if (validateResult.code !== 0) {
+    const combined = [validateResult.stderr, validateResult.stdout].filter(Boolean).join("\n");
+    throw new AppError(
+      ErrorCodes.CHANNEL_BIND_FAILED,
+      `OpenClaw 配置校验失败：${summarizeOutput(combined)}`
+    );
+  }
 
   logger.success("钉钉渠道配置已写入 openclaw.json。");
 }
