@@ -1,3 +1,5 @@
+
+
 # fast-openclaw
 
 `fast-openclaw` now includes two executables:
@@ -172,7 +174,7 @@ End-user required inputs in default mode:
 
 - `PORT` (default `8787`)
 - `HOST` (default `0.0.0.0`)
-- `FAST_OPENCLAW_ADMIN_TOKEN` (default `change-me`, change this in production)
+- `FAST_OPENCLAW_ADMIN_TOKEN` (default `请修改此默认token`, change this in production)
 - `FAST_OPENCLAW_RESUME_HOURS` (default `24`)
 - `FAST_OPENCLAW_GATEWAY_URL` (optional, default gateway URL for CLI)
 - `FAST_OPENCLAW_GATEWAY_TOKEN` (optional, default gateway token for CLI)
